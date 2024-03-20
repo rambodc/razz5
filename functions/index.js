@@ -5,29 +5,6 @@ const cors = require('cors')({origin: true});
 admin.initializeApp();
 
 
-exports.helloWorld = functions.https.onRequest((req, res) => {
-    cors(req, res, async () => {
-        if (req.method !== 'GET') {
-            return res.status(405).send({ error: 'Method Not Allowed' });
-        }
-
-        // Replace 'YOUR_API_KEY_HERE' with your actual API key
-        const expectedApiKey = 'AIzaSyANmQttQ0QVtpYMQhkjHL06FH8GcQFMIW8';
-        // In this example, the API key is expected as a query parameter 'apiKey'
-        const providedApiKey = req.query.apiKey;
-
-        if (providedApiKey !== expectedApiKey) {
-            console.error('Invalid or missing API key');
-            return res.status(401).send('Unauthorized: Invalid API key');
-        }
-
-        // If the API key is correct, send a "Hello, world" response
-        res.send('Hello, world!');
-    });
-});
-
-
-
 exports.testWriteToFirestore = functions.https.onRequest((req, res) => {
     cors(req, res, async () => {
         if (req.method !== 'POST') {
