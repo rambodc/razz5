@@ -2,6 +2,7 @@ const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 admin.initializeApp();
 
+// Central functionHandler
 exports.functionHandler = functions.firestore
     .document('functionCalls/{documentId}')
     .onCreate(async (snap, context) => {
@@ -29,4 +30,53 @@ exports.functionHandler = functions.firestore
         }
     });
 
-    
+// Individual function handlers
+exports.inviteRequestHandler = functions.firestore
+    .document('functionCalls/{documentId}')
+    .onCreate(async (snap, context) => {
+        const data = snap.data();
+        if (data.functionName === 'inviteRequest') {
+            const inviteRequest = require('./inviteRequest');
+            await inviteRequest(context.params.documentId, data.parameters);
+        }
+    });
+
+exports.transactionsHandler = functions.firestore
+    .document('functionCalls/{documentId}')
+    .onCreate(async (snap, context) => {
+        const data = snap.data();
+        if (data.functionName === 'transactions') {
+            const transactions = require('./transactions');
+            await transactions(context.params.documentId, data.parameters);
+        }
+    });
+
+exports.followHandler = functions.firestore
+    .document('functionCalls/{documentId}')
+    .onCreate(async (snap, context) => {
+        const data = snap.data();
+        if (data.functionName === 'follow') {
+            const follow = require('./follow');
+            await follow(context.params.documentId, data.parameters);
+        }
+    });
+
+exports.unfollowHandler = functions.firestore
+    .document('functionCalls/{documentId}')
+    .onCreate(async (snap, context) => {
+        const data = snap.data();
+        if (data.functionName === 'unfollow') {
+            const unfollow = require('./unfollow');
+            await unfollow(context.params.documentId, data.parameters);
+        }
+    });
+
+exports.userSetupHandler = functions.firestore
+    .document('functionCalls/{documentId}')
+    .onCreate(async (snap, context) => {
+        const data = snap.data();
+        if (data.functionName === 'userSetup') {
+            const userSetup = require('./userSetup');
+            await userSetup(context.params.documentId, data.parameters);
+        }
+    });
