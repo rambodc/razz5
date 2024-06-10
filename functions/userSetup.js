@@ -92,11 +92,11 @@ async function generateProfilePhoto(firstName, lastName) {
     const initials = `${firstName[0]}${lastName[0]}`;
 
     // Draw background
-    context.fillStyle = '#0000FF'; // Blue background
+    context.fillStyle = '#0384fc'; // Blue background
     context.fillRect(0, 0, canvas.width, canvas.height);
 
     // Draw initials
-    context.font = 'bold 100px Arial';
+    context.font = '100px Arial';
     context.fillStyle = '#FFFFFF'; // White text
     context.textAlign = 'center';
     context.textBaseline = 'middle';

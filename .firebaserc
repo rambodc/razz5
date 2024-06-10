@@ -1,5 +1,8 @@
 {
   "projects": {
-    "default": "razz5-14781"
-  }
+    "default": "razz5-14781",
+    "staging": "staging1-255e9"
+  },
+  "targets": {},
+  "etags": {}
 }
