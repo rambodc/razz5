@@ -4,8 +4,13 @@ const { VertexAI } = require('@google-cloud/vertexai');
 
 admin.initializeApp();
 
-// Correctly initialize Vertex AI with your Cloud project and location
-const vertexAI = new VertexAI({ project: 'razz5-14781', location: 'us-central1' });
+// Load environment variables
+const vertexProject = functions.config().vertex.project;
+const vertexLocation = functions.config().vertex.location;
+const bucketName = functions.config().bucket.name;
+
+// Initialize Vertex AI with the environment-specific project and location
+const vertexAI = new VertexAI({ project: vertexProject, location: vertexLocation });
 const generativeModel = vertexAI.preview.getGenerativeModel({
     model: 'gemini-1.5-flash-001',
     generationConfig: {
@@ -32,9 +37,6 @@ const generativeModel = vertexAI.preview.getGenerativeModel({
         }
     ],
 });
-
-// Global bucket name
-const bucketName = 'razz5-14781';
 
 // Central functionHandler
 exports.functionHandler = functions.firestore
@@ -124,7 +126,6 @@ exports.runAIHandler = functions.firestore
             await runAI(context.params.documentId, data.parameters, generativeModel, bucketName);
         }
     });
-
 
 exports.createPostHandler = functions.firestore
     .document('functionCalls/{documentId}')
