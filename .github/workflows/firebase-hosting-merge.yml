@@ -6,14 +6,27 @@ name: Deploy to Firebase Hosting on merge
   push:
     branches:
       - main
+      - dev
+      - staging
 jobs:
   build_and_deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: FirebaseExtended/action-hosting-deploy@v0
+      - run: npm ci && npm run build
+      - name: Deploy to Firebase Hosting (Staging)
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: '${{ secrets.GITHUB_TOKEN }}'
+          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_STAGING1_255E9 }}'
+          channelId: live
+          projectId: staging1-255e9
+        if: github.ref == 'refs/heads/staging'
+      - name: Deploy to Firebase Hosting (Dev)
+        uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: '${{ secrets.GITHUB_TOKEN }}'
           firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_RAZZ5_14781 }}'
           channelId: live
           projectId: razz5-14781
+        if: github.ref == 'refs/heads/dev'
