@@ -2,7 +2,8 @@
   "projects": {
     "default": "staging1-255e9",
     "staging": "staging1-255e9",
-    "dev": "razz5-14781"
+    "dev": "razz5-14781",
+    "prod": "production1-fbd5d"
   },
   "targets": {},
   "etags": {}
