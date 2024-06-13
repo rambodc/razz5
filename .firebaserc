@@ -1,6 +1,10 @@
 {
   "projects": {
+<<<<<<< HEAD
+    "default": "production1-fbd5d",
+=======
     "default": "staging1-255e9",
+>>>>>>> dev
     "staging": "staging1-255e9",
     "dev": "razz5-14781",
     "prod": "production1-fbd5d"
