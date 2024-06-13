@@ -2,5 +2,8 @@
   "dependencies": {
     "@google-cloud/logging": "^11.0.0",
     "core-js": "^3.37.1"
+  },
+  "scripts": {
+    "build": "echo 'No build step needed' && exit 0"
   }
 }
