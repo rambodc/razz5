@@ -11,11 +11,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: npm ci && npm run build
-      - name: Deploy to Firebase Hosting (Production)
+      - name: Deploy to Firebase Hosting (Prod)
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: '${{ secrets.GITHUB_TOKEN }}'
-          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_PROD }}'
+          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_PRODUCTION1_FBD5D }}'
           channelId: live
           projectId: production1-fbd5d
         if: github.ref == 'refs/heads/main'

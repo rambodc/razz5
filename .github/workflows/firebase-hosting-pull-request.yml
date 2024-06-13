@@ -11,11 +11,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: npm ci && npm run build
-      - name: Deploy to Firebase Hosting Preview (Production)
+      - name: Deploy to Firebase Hosting Preview (Prod)
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: '${{ secrets.GITHUB_TOKEN }}'
-          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_PROD }}'
+          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_PRODUCTION1_FBD5D }}'
           projectId: production1-fbd5d
       - name: Deploy to Firebase Hosting Preview (Staging)
         uses: FirebaseExtended/action-hosting-deploy@v0
