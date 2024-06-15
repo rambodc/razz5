@@ -1,10 +1,11 @@
 ## Patch Variables:
 
 * __authEmail__ ```String```
-* __bucketPath__ ```String```
 * __editPost__ ```Object```
 * __email__ ```String```
 * __emailVerified__ ```String```
+* __fbConfig__ ```Object```
+* __fbProjectId__ ```String```
 * __fbTokenId__ ```String```
 * __firstName__ ```String```
 * __FrameType__ ```String```
