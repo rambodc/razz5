@@ -1,6 +1,36 @@
 const admin = require('firebase-admin');
+const { VertexAI } = require('@google-cloud/vertexai');
 
-module.exports = async function runAI(documentId, params, generativeModel, bucketName) {
+module.exports = async function runAI(documentId, params, bucketName, vertexProject, vertexLocation) {
+    const vertexAI = new VertexAI({ project: vertexProject, location: vertexLocation });
+
+    const generativeModel = vertexAI.preview.getGenerativeModel({
+        model: 'gemini-1.5-flash-001',
+        generationConfig: {
+            'maxOutputTokens': 8192,
+            'temperature': 1,
+            'topP': 0.95,
+        },
+        safetySettings: [
+            {
+                'category': 'HARM_CATEGORY_HATE_SPEECH',
+                'threshold': 'BLOCK_MEDIUM_AND_ABOVE'
+            },
+            {
+                'category': 'HARM_CATEGORY_DANGEROUS_CONTENT',
+                'threshold': 'BLOCK_MEDIUM_AND_ABOVE'
+            },
+            {
+                'category': 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
+                'threshold': 'BLOCK_MEDIUM_AND_ABOVE'
+            },
+            {
+                'category': 'HARM_CATEGORY_HARASSMENT',
+                'threshold': 'BLOCK_MEDIUM_AND_ABOVE'
+            }
+        ],
+    });
+
     const { prompt, postId, path } = params;
 
     try {
