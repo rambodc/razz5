@@ -2,6 +2,10 @@ const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 admin.initializeApp();
 
+const vertexProject = functions.config().vertex.project;
+const vertexLocation = functions.config().vertex.location;
+const bucketName = functions.config().bucket.name;
+
 // Central functionHandler
 exports.functionHandler = functions.firestore
     .document('functionCalls/{documentId}')
@@ -21,7 +25,7 @@ exports.functionHandler = functions.firestore
             const func = require(`./${functionName}`);
 
             if (func && typeof func === 'function') {
-                await func(documentId, parameters);
+                await func(documentId, parameters, bucketName, vertexProject, vertexLocation);
             } else {
                 throw new Error(`The function ${functionName} is not available or is not a valid function.`);
             }
@@ -43,7 +47,7 @@ exports.inviteRequestHandler = functions.firestore
         const data = snap.data();
         if (data.functionName === 'inviteRequest') {
             const inviteRequest = require('./inviteRequest');
-            await inviteRequest(context.params.documentId, data.parameters);
+            await inviteRequest(context.params.documentId, data.parameters, bucketName, vertexProject, vertexLocation);
         }
     });
 
@@ -53,7 +57,7 @@ exports.transactionsHandler = functions.firestore
         const data = snap.data();
         if (data.functionName === 'transactions') {
             const transactions = require('./transactions');
-            await transactions(context.params.documentId, data.parameters);
+            await transactions(context.params.documentId, data.parameters, bucketName, vertexProject, vertexLocation);
         }
     });
 
@@ -63,7 +67,7 @@ exports.followHandler = functions.firestore
         const data = snap.data();
         if (data.functionName === 'follow') {
             const follow = require('./follow');
-            await follow(context.params.documentId, data.parameters);
+            await follow(context.params.documentId, data.parameters, bucketName, vertexProject, vertexLocation);
         }
     });
 
@@ -73,7 +77,7 @@ exports.unfollowHandler = functions.firestore
         const data = snap.data();
         if (data.functionName === 'unfollow') {
             const unfollow = require('./unfollow');
-            await unfollow(context.params.documentId, data.parameters);
+            await unfollow(context.params.documentId, data.parameters, bucketName, vertexProject, vertexLocation);
         }
     });
 
@@ -83,7 +87,7 @@ exports.userSetupHandler = functions.firestore
         const data = snap.data();
         if (data.functionName === 'userSetup') {
             const userSetup = require('./userSetup');
-            await userSetup(context.params.documentId, data.parameters);
+            await userSetup(context.params.documentId, data.parameters, bucketName, vertexProject, vertexLocation);
         }
     });
 
@@ -93,7 +97,7 @@ exports.runAIHandler = functions.firestore
         const data = snap.data();
         if (data.functionName === 'runAI') {
             const runAI = require('./runAI');
-            await runAI(context.params.documentId, data.parameters);
+            await runAI(context.params.documentId, data.parameters, bucketName, vertexProject, vertexLocation);
         }
     });
 
@@ -107,6 +111,7 @@ exports.createPostHandler = functions.firestore
         }
     });
 
+    
 exports.updateEmailHandler = functions.firestore
     .document('functionCalls/{documentId}')
     .onCreate(async (snap, context) => {
@@ -117,6 +122,7 @@ exports.updateEmailHandler = functions.firestore
         }
     });
 
+    
 exports.updateUtcOffsetHandler = functions.firestore
     .document('functionCalls/{documentId}')
     .onCreate(async (snap, context) => {
@@ -126,6 +132,7 @@ exports.updateUtcOffsetHandler = functions.firestore
             await updateUtcOffset(context.params.documentId, data.parameters);
         }
     });
+
 
 exports.updateEmailVerifiedHandler = functions.firestore
     .document('functionCalls/{documentId}')
