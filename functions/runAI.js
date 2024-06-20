@@ -1,7 +1,12 @@
+const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 const { VertexAI } = require('@google-cloud/vertexai');
 
-module.exports = async function runAI(documentId, params, bucketName, vertexProject, vertexLocation) {
+module.exports = async function runAI(documentId, params) {
+    const vertexProject = functions.config().vertex.project;
+    const vertexLocation = functions.config().vertex.location;
+    const bucketName = functions.config().bucket.name;
+
     const vertexAI = new VertexAI({ project: vertexProject, location: vertexLocation });
 
     const generativeModel = vertexAI.preview.getGenerativeModel({
@@ -12,22 +17,10 @@ module.exports = async function runAI(documentId, params, bucketName, vertexProj
             'topP': 0.95,
         },
         safetySettings: [
-            {
-                'category': 'HARM_CATEGORY_HATE_SPEECH',
-                'threshold': 'BLOCK_MEDIUM_AND_ABOVE'
-            },
-            {
-                'category': 'HARM_CATEGORY_DANGEROUS_CONTENT',
-                'threshold': 'BLOCK_MEDIUM_AND_ABOVE'
-            },
-            {
-                'category': 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
-                'threshold': 'BLOCK_MEDIUM_AND_ABOVE'
-            },
-            {
-                'category': 'HARM_CATEGORY_HARASSMENT',
-                'threshold': 'BLOCK_MEDIUM_AND_ABOVE'
-            }
+            { 'category': 'HARM_CATEGORY_HATE_SPEECH', 'threshold': 'BLOCK_MEDIUM_AND_ABOVE' },
+            { 'category': 'HARM_CATEGORY_DANGEROUS_CONTENT', 'threshold': 'BLOCK_MEDIUM_AND_ABOVE' },
+            { 'category': 'HARM_CATEGORY_SEXUALLY_EXPLICIT', 'threshold': 'BLOCK_MEDIUM_AND_ABOVE' },
+            { 'category': 'HARM_CATEGORY_HARASSMENT', 'threshold': 'BLOCK_MEDIUM_AND_ABOVE' },
         ],
     });
 
@@ -35,7 +28,7 @@ module.exports = async function runAI(documentId, params, bucketName, vertexProj
 
     try {
         const fileUri = `gs://${bucketName}.appspot.com/${path}`;
-        const file = admin.storage().bucket(`${bucketName}.appspot.com`).file(path);
+        const file = admin.storage().bucket(bucketName).file(path);
 
         // Fetch file metadata from the Cloud Storage bucket
         const [metadata] = await file.getMetadata();
@@ -59,9 +52,7 @@ module.exports = async function runAI(documentId, params, bucketName, vertexProj
 
         const filePart = { fileData: { fileUri: fileUri, mimeType: mimeType } };
         const textPart = { text: prompt };
-        const request = {
-            contents: [{ role: 'user', parts: [textPart, filePart] }],
-        };
+        const request = { contents: [{ role: 'user', parts: [textPart, filePart] }] };
 
         console.log('Request to Vertex AI with gs:// URL:', JSON.stringify(request, null, 2));
 
@@ -73,9 +64,7 @@ module.exports = async function runAI(documentId, params, bucketName, vertexProj
         const aggregatedResponse = await streamingResult.response;
 
         // Update Firestore document with the response under 'ai' map
-        await admin.firestore().collection('posts').doc(postId).update({
-            ai: aggregatedResponse,
-        });
+        await admin.firestore().collection('posts').doc(postId).update({ ai: aggregatedResponse });
 
         // Update functionCalls document with the completion status
         await admin.firestore().collection('functionCalls').doc(documentId).update({
