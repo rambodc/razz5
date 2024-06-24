@@ -143,3 +143,30 @@ exports.updateEmailVerifiedHandler = functions.firestore
             await updateEmailVerified(context.params.documentId, data.parameters);
         }
     });
+
+
+exports.resizeImageHandler = functions.firestore
+    .document('functionCalls/{documentId}')
+    .onCreate(async (snap, context) => {
+        const data = snap.data();
+        if (data.functionName === 'resizeImage') {
+            const resizeImage = require('./resizeImage');
+            await resizeImage(context.params.documentId, data.parameters, bucketName);
+        }
+    });
+
+
+exports.createPostWorkflowHandler = functions.firestore
+    .document('functionCalls/{documentId}')
+    .onCreate(async (snap, context) => {
+        const data = snap.data();
+        if (data.functionName === 'createPostWorkflow') {
+            const createPostWorkflow = require('./createPostWorkflow');
+            await createPostWorkflow(context.params.documentId, data.parameters);
+        }
+    });
+
+
+
+
+    
