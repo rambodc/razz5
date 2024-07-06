@@ -32,15 +32,23 @@ exports.functionHandler = functions.firestore
         } catch (error) {
             console.error(`Error executing ${functionName}: ${error}`);
 
+            let status = 'error';
+            let errorMessage = error.message;
+
+            if (error.message.includes('already being processed')) {
+                status = 'concurrencyError';
+                errorMessage = 'Function call hit concurrency issue';
+            }
+
             await admin.firestore().collection('functionCalls').doc(documentId).update({
-                'status': 'error',
-                'response.errorMessage': error.message,
+                'status': status,
+                'response.errorMessage': errorMessage,
                 'response.error': admin.firestore.FieldValue.serverTimestamp()
             });
         }
     });
 
-// Individual function handlers
+// Individual function handlers (unchanged)
 exports.inviteRequestHandler = functions.firestore
     .document('functionCalls/{documentId}')
     .onCreate(async (snap, context) => {
@@ -111,7 +119,6 @@ exports.createPostHandler = functions.firestore
         }
     });
 
-    
 exports.updateEmailHandler = functions.firestore
     .document('functionCalls/{documentId}')
     .onCreate(async (snap, context) => {
@@ -122,7 +129,6 @@ exports.updateEmailHandler = functions.firestore
         }
     });
 
-    
 exports.updateUtcOffsetHandler = functions.firestore
     .document('functionCalls/{documentId}')
     .onCreate(async (snap, context) => {
@@ -132,7 +138,6 @@ exports.updateUtcOffsetHandler = functions.firestore
             await updateUtcOffset(context.params.documentId, data.parameters);
         }
     });
-
 
 exports.updateEmailVerifiedHandler = functions.firestore
     .document('functionCalls/{documentId}')
@@ -144,7 +149,6 @@ exports.updateEmailVerifiedHandler = functions.firestore
         }
     });
 
-
 exports.resizeImageHandler = functions.firestore
     .document('functionCalls/{documentId}')
     .onCreate(async (snap, context) => {
@@ -155,18 +159,13 @@ exports.resizeImageHandler = functions.firestore
         }
     });
 
+exports.pinataHandler = functions.firestore
+.document('functionCalls/{documentId}')
+.onCreate(async (snap, context) => {
+    const data = snap.data();
+    if (data.functionName === 'pinata') {
+        const pinata = require('./pinata');
+        await pinata(context.params.documentId, data.parameters, bucketName, vertexProject, vertexLocation);
+    }
+});
 
-exports.createPostWorkflowHandler = functions.firestore
-    .document('functionCalls/{documentId}')
-    .onCreate(async (snap, context) => {
-        const data = snap.data();
-        if (data.functionName === 'createPostWorkflow') {
-            const createPostWorkflow = require('./createPostWorkflow');
-            await createPostWorkflow(context.params.documentId, data.parameters);
-        }
-    });
-
-
-
-
-    

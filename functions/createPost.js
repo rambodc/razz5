@@ -1,3 +1,29 @@
+/*
+Steps of the function:
+
+1. Import required module: 'firebase-admin'.
+2. Export an asynchronous function 'createPost' with parameters: documentId and params.
+3. Extract parameters from the 'params' object: postId, uid, status, postType, isArchived, originalUrl, fileType, fileFormat, title, description, and version.
+4. Define Firestore references for 'functionCalls', 'posts', and 'users' collections.
+5. Get the server timestamp.
+6. Run the entire operation in a Firestore transaction:
+    a. Retrieve the functionCalls document using 'documentId'.
+    b. Check if the function call status is 'processing'. If so, throw an error.
+    c. Retrieve the user's document using the uid from the functionCalls document.
+    d. If the user's document does not exist, throw an error.
+    e. Initialize the 'myPosts' field in the user's document if it does not exist.
+    f. Check if the post already exists in the 'myPosts' array. If so, return.
+    g. Mark the function call as processing.
+    h. Add a new post to the 'myPosts' array with the createdAt timestamp.
+    i. Update the 'myPostCount'.
+    j. Create a new post record.
+    k. Write the post record and update the user's document.
+    l. Update the function call status to 'completed' with the response data.
+7. Catch and handle any errors:
+    a. Log the error message.
+    b. Update the function call document with the appropriate error status and message.
+*/
+
 const admin = require('firebase-admin');
 
 module.exports = async function createPost(documentId, params) {
@@ -10,10 +36,9 @@ module.exports = async function createPost(documentId, params) {
     originalUrl, 
     fileType, 
     fileFormat, 
-    thumbnailUrl,
-    title, // Added title to params
-    description, // Added description to params
-    version // Added version to params
+    title, 
+    description, 
+    version 
   } = params;
 
   const postDocRef = admin.firestore().collection('posts').doc(postId);
@@ -32,10 +57,14 @@ module.exports = async function createPost(documentId, params) {
       // Retrieve the functionCalls document to get the top-level uid
       const functionCallDoc = await transaction.get(functionCallDocRef);
       const functionCallData = functionCallDoc.data();
-      const userUid = functionCallData.uid;
-      const userDocRef = admin.firestore().collection('users').doc(userUid);
+
+      if (functionCallData.status === 'processing') {
+        throw new Error('This function call is already being processed.');
+      }
 
       // Retrieve the user's document
+      const userUid = functionCallData.uid;
+      const userDocRef = admin.firestore().collection('users').doc(userUid);
       console.log(`Reading user document for uid: ${userUid}`);
       const userDoc = await transaction.get(userDocRef);
 
@@ -59,6 +88,11 @@ module.exports = async function createPost(documentId, params) {
         return;
       }
 
+      // Mark the function call as processing
+      transaction.update(functionCallDocRef, {
+        'status': 'processing'
+      });
+
       // Add new post to the posts array with createdAt timestamp
       userData.myPosts.posts.push({
         postId: postId,
@@ -68,11 +102,10 @@ module.exports = async function createPost(documentId, params) {
         originalUrl: originalUrl,
         fileType: fileType,
         fileFormat: fileFormat,
-        thumbnailUrl: thumbnailUrl,
-        title: title, // Added title to the post object
-        description: description, // Added description to the post object
+        title: title,
+        description: description,
         createdAt: serverTimestamp,
-        version: version // Added version to the post object
+        version: version
       });
 
       // Update the myPostCount
@@ -88,11 +121,10 @@ module.exports = async function createPost(documentId, params) {
         originalUrl: originalUrl,
         fileType: fileType,
         fileFormat: fileFormat,
-        thumbnailUrl: thumbnailUrl,
-        title: title, // Added title to the post record
-        description: description, // Added description to the post record
+        title: title,
+        description: description,
         createdAt: serverTimestamp,
-        version: version // Added version to the post record
+        version: version
       };
 
       console.log(`Writing post record and updating user document for uid: ${userUid}`);
@@ -115,10 +147,18 @@ module.exports = async function createPost(documentId, params) {
   } catch (error) {
     console.error(`Error in createPost function for documentId: ${documentId}: ${error.message}`);
 
-    // Update function call status to error
+    let status = 'error';
+    let errorMessage = error.message;
+
+    if (error.message.includes('already being processed')) {
+      status = 'concurrencyError';
+      errorMessage = 'Function call hit concurrency issue';
+    }
+
+    // Update function call status to error or concurrencyError
     await functionCallDocRef.update({
-      'status': 'error',
-      'response.errorMessage': error.message,
+      'status': status,
+      'response.errorMessage': errorMessage,
       'response.error': admin.firestore.FieldValue.serverTimestamp()
     });
   }
