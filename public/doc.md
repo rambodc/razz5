@@ -18,12 +18,14 @@
 * __loader__ ```Number```
 * __network__ ```String```
 * __profilePhoto__ ```String```
+* __selectedLog__ ```Object```
 * __thankyou__ ```Number```
 * __themeColors__ ```Object```
 * __timezone__ ```String```
 * __uid__ ```String```
-* __uploadPostId__ ```String```
 * __usersListner__ ```Object```
+* __userStatus__ ```String```
+* __utcOffset__ ```String```
 * __width__ ```Number```
 * __wssAMM__ ```String```
 * __wssMainnet__ ```String```
