@@ -169,3 +169,13 @@ exports.pinataHandler = functions.firestore
     }
 });
 
+
+exports.updatePostTitleDescHandler = functions.firestore
+    .document('functionCalls/{documentId}')
+    .onCreate(async (snap, context) => {
+        const data = snap.data();
+        if (data.functionName === 'updatePostTitleDesc') {
+            const updatePostTitleDesc = require('./updatePostTitleDesc');
+            await updatePostTitleDesc(context.params.documentId, data.parameters);
+        }
+    });
