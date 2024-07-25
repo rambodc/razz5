@@ -2,7 +2,7 @@ name: Deploy to Firebase Hosting on merge
 'on':
   push:
     branches:
-      - main
+      - prod  # Changed from main to prod
       - dev
       - staging
 jobs:
@@ -18,7 +18,7 @@ jobs:
           firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_PRODUCTION1_FBD5D }}'
           channelId: live
           projectId: production1-fbd5d
-        if: github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/prod'  # Changed from main to prod
       - name: Deploy to Firebase Hosting (Staging)
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
