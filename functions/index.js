@@ -69,25 +69,6 @@ exports.transactionsHandler = functions.firestore
         }
     });
 
-exports.followHandler = functions.firestore
-    .document('functionCalls/{documentId}')
-    .onCreate(async (snap, context) => {
-        const data = snap.data();
-        if (data.functionName === 'follow') {
-            const follow = require('./follow');
-            await follow(context.params.documentId, data.parameters, bucketName, vertexProject, vertexLocation);
-        }
-    });
-
-exports.unfollowHandler = functions.firestore
-    .document('functionCalls/{documentId}')
-    .onCreate(async (snap, context) => {
-        const data = snap.data();
-        if (data.functionName === 'unfollow') {
-            const unfollow = require('./unfollow');
-            await unfollow(context.params.documentId, data.parameters, bucketName, vertexProject, vertexLocation);
-        }
-    });
 
 exports.userSetupHandler = functions.firestore
     .document('functionCalls/{documentId}')
