@@ -5,17 +5,24 @@
     <style>
         body {
             margin: 0;
+            padding: 0;
             background-color: #000;
             color: #fff;
             font-family: Helvetica, Arial, sans-serif;
-            overflow: hidden; /* disable scrolling / rubberband effect on mobile */
-            height:100vh;
+            overflow: hidden; /* Disable scrolling */
+            position: fixed; /* Prevent resizing */
+            width: 100%; /* Full width */
+            height: 100%; /* Full height */
+            top: 0;
+            left: 0;
         }
-
+    
         canvas {
             display: block;
             position: absolute;
-            outline:0;
+            width: 100%;
+            height: 100%;
+            outline: 0;
         }
 
         * {
@@ -32,10 +39,10 @@
 
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1">
-    <meta itemprop="name" content="RazzberryDev1">
-    <meta itemprop="description" content="made with cables">
+    <meta itemprop="name" content="Razzberry Dev">
+    <meta itemprop="description" content="Powered by XRPL">
     <meta itemprop="image" content="screenshot.png">
-    <meta name="description" content="made with cables"/>
+    <meta name="description" content="Powered by XRPL"/>
 
 </head>
 <body>
@@ -76,6 +83,28 @@
                 "onFinishedLoading": patchFinishedLoading,
                 "canvas": {"alpha":true, "premultipliedAlpha":true } // make canvas transparent
             });
+
+            // Define the external function for web share
+            CABLES.patch.config.webShare = function (params) {
+                const [text, url] = params;
+                const shareData = {
+                    title: "Shared via Cables",
+                    text: text,
+                    url: url
+                };
+
+                if (navigator.share) {
+                    navigator.share(shareData)
+                        .then(() => {
+                            console.log('Shared successfully');
+                        })
+                        .catch((error) => {
+                            console.error('Error sharing:', error);
+                        });
+                } else {
+                    console.error('Web Share API not supported.');
+                }
+            };
         });
 
         // disable rubberband effect on mobile devices

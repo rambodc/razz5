@@ -31,3 +31,6 @@
 * __wssMainnet__ ```String```
 * __wssSelect__ ```String```
 
+## Patch Functions:
+
+* webShare
