@@ -10,17 +10,32 @@
             color: white;
             font-family: Arial, sans-serif;
             margin: 0;
-            padding: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            box-sizing: border-box;
+            padding: 0;
+        }
+
+        .navbar {
+            background-color: #333;
+            overflow: hidden;
+        }
+
+        .navbar a {
+            float: left;
+            display: block;
+            color: #f2f2f2;
+            text-align: center;
+            padding: 14px 20px;
+            text-decoration: none;
+            font-size: 17px;
+        }
+
+        .navbar a:hover {
+            background-color: #ddd;
+            color: black;
         }
 
         .content {
             max-width: 500px;
-            margin: 0 auto;
+            margin: 20px auto;
             padding: 20px;
             text-align: left;
         }
@@ -49,6 +64,13 @@
     </style>
 </head>
 <body>
+    <div class="navbar">
+        <a href="index.html">Home</a>
+        <a href="about.html">About</a>
+        <a href="team.html">Team</a>
+        <a href="contact.html">Contact</a>
+    </div>
+
     <div class="content">
         <h2>Our Team</h2>
 
@@ -77,7 +99,7 @@
             <img src="https://razz5-14781.firebaseapp.com/assets/SherifIdris.png" alt="Sherif Idris">
             <h3>Sherif Idris</h3>
             <p><strong>Advisor</strong></p>
-            <p>Sherif's extensive experience in the industry makes him a key advisor to our project, providing guidance on strategic decisions.</p>
+            <p>Sherif is an advisor to our project, providing guidance on strategic decisions.</p>
         </div>
 
     </div>
