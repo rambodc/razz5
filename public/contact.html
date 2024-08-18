@@ -14,13 +14,19 @@
         }
 
         .navbar {
-            background-color: #333;
+            background-color: transparent;
             overflow: hidden;
+            text-align: center;
+            position: fixed;
+            top: 0;
+            width: 100%;
+            z-index: 1000;
+            padding: 10px 0;
+            backdrop-filter: blur(10px);
         }
 
         .navbar a {
-            float: left;
-            display: block;
+            display: inline-block;
             color: #f2f2f2;
             text-align: center;
             padding: 14px 20px;
@@ -28,14 +34,13 @@
             font-size: 17px;
         }
 
-        .navbar a:hover {
-            background-color: #ddd;
-            color: black;
+        .navbar a:hover, .navbar a.active {
+            border-bottom: 2px solid #f2f2f2;
         }
 
         .content {
             max-width: 500px;
-            margin: 40px auto;
+            margin: 80px auto 20px;
             padding: 20px;
             text-align: left;
         }
@@ -97,7 +102,7 @@
         <a href="index.html">Home</a>
         <a href="about.html">About</a>
         <a href="team.html">Team</a>
-        <a href="contact.html">Contact</a>
+        <a href="contact.html" class="active">Contact</a>
     </div>
 
     <div class="content">
