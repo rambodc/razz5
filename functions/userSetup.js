@@ -30,6 +30,25 @@ module.exports = async function userSetup(documentId, params) {
                 throw new Error('User already exists.');
             }
 
+            // Create initial username from email
+            let baseUsername = email.split('@')[0];
+            let username = baseUsername;
+
+            // Check for username uniqueness
+            let usernameTaken = true;
+            let count = 0;
+            const usersCollection = admin.firestore().collection('users');
+
+            while (usernameTaken) {
+                const existingUserQuery = await usersCollection.where('username', '==', username).get();
+                if (existingUserQuery.empty) {
+                    usernameTaken = false;
+                } else {
+                    count++;
+                    username = `${baseUsername}${count}`;
+                }
+            }
+
             transaction.update(functionCallRef, {
                 'status': 'processing'
             });
@@ -39,6 +58,7 @@ module.exports = async function userSetup(documentId, params) {
                 firstName,
                 lastName,
                 email,
+                username,  // Store the generated username
                 userType,
                 userStatus,
                 emailVerified: emailVerified === 'true',
@@ -52,6 +72,7 @@ module.exports = async function userSetup(documentId, params) {
                 'status': 'completed',
                 'response.result': 'success',
                 'response.data.uid': uid,
+                'response.data.username': username, // Include the username in the response
                 'response.completed': admin.firestore.FieldValue.serverTimestamp()
             });
         });
