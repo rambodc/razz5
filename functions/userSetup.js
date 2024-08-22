@@ -31,7 +31,7 @@ module.exports = async function userSetup(documentId, params) {
             }
 
             // Create initial username from email
-            let baseUsername = email.split('@')[0];
+            let baseUsername = email.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '');
             let username = baseUsername;
 
             // Check for username uniqueness
@@ -58,7 +58,7 @@ module.exports = async function userSetup(documentId, params) {
                 firstName,
                 lastName,
                 email,
-                username,  // Store the generated username
+                username,  // Store the sanitized and unique username
                 userType,
                 userStatus,
                 emailVerified: emailVerified === 'true',
