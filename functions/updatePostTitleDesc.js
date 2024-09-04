@@ -1,3 +1,30 @@
+/*
+Steps of the function:
+
+1. Import the required module: 'firebase-admin'.
+2. Export an asynchronous function 'updatePostTitleDesc' with parameters: documentId and params.
+3. Extract parameters from the 'params' object: postId, uid, title, description, thumbnail200, and status.
+4. Define Firestore references for 'posts', 'functionCalls', and 'users' collections.
+5. Start a try-catch block to handle errors:
+    a. Log the beginning of the transaction.
+    b. Get the server timestamp.
+6. Run the entire operation in a Firestore transaction:
+    a. Retrieve the functionCalls document using 'documentId' to ensure it is not already processing.
+    b. Retrieve the post document using 'postId' to ensure it exists.
+    c. Retrieve the user document using 'uid' to check and update the user's myPosts array.
+    d. If the post exists in the user's myPosts array, find its index.
+7. Perform updates within the transaction:
+    a. Update the post document with the new title, description, status, and updatedAt timestamp.
+    b. If the post exists in the user's myPosts array, update the title, description, status, and thumbnail200 fields.
+    c. Update the user's document with the modified myPosts array if applicable.
+    d. Update the functionCalls document to mark the function call as 'completed' with success status and response data.
+8. Log the successful completion of the transaction.
+9. Catch and handle any errors:
+    a. Log the error message.
+    b. Set the appropriate status ('error' or 'concurrencyError') based on the error.
+    c. Update the functionCalls document with the error status and message.
+*/
+
 const admin = require('firebase-admin');
 
 module.exports = async function updatePostTitleDesc(documentId, params) {

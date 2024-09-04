@@ -160,3 +160,14 @@ exports.updatePostTitleDescHandler = functions.firestore
             await updatePostTitleDesc(context.params.documentId, data.parameters);
         }
     });
+
+    
+exports.followHandler = functions.firestore
+    .document('functionCalls/{documentId}')
+    .onCreate(async (snap, context) => {
+        const data = snap.data();
+        if (data.functionName === 'follow') {
+            const follow = require('./follow');
+            await follow(context.params.documentId, data.parameters);
+        }
+    });

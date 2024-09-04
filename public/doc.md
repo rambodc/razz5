@@ -28,8 +28,6 @@
 * __userStatus__ ```String```
 * __utcOffset__ ```String```
 * __width__ ```Number```
-* __wssAMM__ ```String```
-* __wssMainnet__ ```String```
 * __wssSelect__ ```String```
 
 ## Patch Functions:

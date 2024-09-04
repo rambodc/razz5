@@ -1,3 +1,31 @@
+/*
+Steps of the function:
+
+1. Import required modules: 'firebase-admin', 'canvas', and 'sharp'.
+2. Export an asynchronous function 'userSetup' with parameters: documentId and params.
+3. Extract parameters from the 'params' object: uid, firstName, lastName, email, userType, userStatus, emailVerified, and utcOffset.
+4. Define Firestore references for 'functionCalls', 'users', 'usersPublic', 'conversation', and 'chats' collections.
+5. Run the entire operation in a Firestore transaction:
+    a. Retrieve the functionCalls document using 'documentId'.
+    b. Check if the function call status is 'processing'. If so, throw an error.
+    c. Retrieve the user's document using 'uid'. If it exists, throw an error.
+    d. Generate a unique username based on the user's email address.
+    e. Mark the function call as processing.
+    f. Create or update the user's document in the 'users' collection with provided details and generated username.
+    g. Create empty documents for 'conversation' and 'chats' subcollection for the user.
+    h. Update the functionCalls document with the completion status and response data.
+6. Generate the profile photo with user initials and resized versions:
+    a. Create a base profile photo with initials using the canvas.
+    b. Save the original and resized profile photos to Cloud Storage.
+    c. Generate download URLs for all saved images.
+7. Update the 'users' document with photo URLs.
+8. Create a document in the 'usersPublic' collection with the same uid:
+    a. Store firstName, lastName, and profile photo URLs.
+9. Catch and handle any errors:
+    a. Log the error message.
+    b. Update the functionCalls document with the appropriate error status and message.
+*/
+
 const admin = require('firebase-admin');
 const { createCanvas } = require('canvas');
 const sharp = require('sharp');
@@ -8,13 +36,17 @@ module.exports = async function userSetup(documentId, params) {
 
     const functionCallRef = admin.firestore().collection('functionCalls').doc(documentId);
     const userRef = admin.firestore().collection('users').doc(uid);
+    const usersPublicRef = admin.firestore().collection('usersPublic').doc(uid);
     const conversationRef = admin.firestore().collection('conversation').doc(uid);
     const chatsRef = conversationRef.collection('chats').doc();
 
     try {
+        // 5. Run the entire operation in a Firestore transaction
         await admin.firestore().runTransaction(async (transaction) => {
+            // 5a. Retrieve the functionCalls document using 'documentId'
             const functionCallDoc = await transaction.get(functionCallRef);
 
+            // 5b. Check if the function call status is 'processing'. If so, throw an error.
             if (!functionCallDoc.exists) {
                 throw new Error('functionCalls document does not exist.');
             }
@@ -25,13 +57,14 @@ module.exports = async function userSetup(documentId, params) {
                 throw new Error('This function call is already being processed.');
             }
 
+            // 5c. Retrieve the user's document using 'uid'. If it exists, throw an error.
             const userDoc = await transaction.get(userRef);
             if (userDoc.exists) {
                 throw new Error('User already exists.');
             }
 
-            // Create initial username from email
-            let baseUsername = email.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '');
+            // 5d. Generate a unique username based on the user's email address.
+            let baseUsername = email.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 10);
             let username = baseUsername;
 
             // Check for username uniqueness
@@ -45,14 +78,16 @@ module.exports = async function userSetup(documentId, params) {
                     usernameTaken = false;
                 } else {
                     count++;
-                    username = `${baseUsername}${count}`;
+                    username = `${baseUsername.substring(0, 10 - count.toString().length)}${count}`;
                 }
             }
 
+            // 5e. Mark the function call as processing.
             transaction.update(functionCallRef, {
                 'status': 'processing'
             });
 
+            // 5f. Create or update the user's document in the 'users' collection with provided details and generated username.
             transaction.set(userRef, {
                 uid,
                 firstName,
@@ -62,12 +97,15 @@ module.exports = async function userSetup(documentId, params) {
                 userType,
                 userStatus,
                 emailVerified: emailVerified === 'true',
-                utcOffset
+                utcOffset,
+                createdAt: admin.firestore.FieldValue.serverTimestamp() // Add the createdAt field
             }, { merge: true });
 
+            // 5g. Create empty documents for 'conversation' and 'chats' subcollection for the user.
             transaction.set(conversationRef, {}, { merge: true });
             transaction.set(chatsRef, {}, { merge: true });
 
+            // 5h. Update the functionCalls document with the completion status and response data.
             transaction.update(functionCallRef, {
                 'status': 'completed',
                 'response.result': 'success',
@@ -77,12 +115,14 @@ module.exports = async function userSetup(documentId, params) {
             });
         });
 
-        // Generate profile photo and resized photos
+        // 6. Generate the profile photo with user initials and resized versions
+        // 6a. Create a base profile photo with initials using the canvas.
         const profilePhotoBuffer = await generateProfilePhoto(firstName, lastName);
         const profilePhotoPath = `users/${uid}/profilePhoto/${uid}.png`;
         const bucket = admin.storage().bucket();
         const file = bucket.file(profilePhotoPath);
 
+        // 6b. Save the original and resized profile photos to Cloud Storage.
         await file.save(profilePhotoBuffer, {
             metadata: {
                 contentType: 'image/png'
@@ -103,7 +143,7 @@ module.exports = async function userSetup(documentId, params) {
             resizedPaths[size] = resizedPhotoPath;
         }
 
-        // Get URLs for the images
+        // 6c. Generate download URLs for all saved images.
         const getDownloadUrl = async (filePath) => {
             const file = bucket.file(filePath);
             const [metadata] = await file.getMetadata();
@@ -126,8 +166,20 @@ module.exports = async function userSetup(documentId, params) {
         const profilePhoto400Url = await getDownloadUrl(resizedPaths[400]);
         const profilePhoto800Url = await getDownloadUrl(resizedPaths[800]);
 
-        // Update user document with photo URLs
+        // 7. Update the 'users' document with photo URLs.
         await userRef.update({
+            profilePhotoOriginalUrl,
+            profilePhoto200Url,
+            profilePhoto400Url,
+            profilePhoto800Url
+        });
+
+        // 8. Create a document in the 'usersPublic' collection with the same uid
+        // 8a. Store firstName, lastName, and profile photo URLs.
+        await usersPublicRef.set({
+            uid,
+            firstName,
+            lastName,
             profilePhotoOriginalUrl,
             profilePhoto200Url,
             profilePhoto400Url,
@@ -145,6 +197,9 @@ module.exports = async function userSetup(documentId, params) {
             errorMessage = 'Function call hit concurrency issue';
         }
 
+        // 9. Catch and handle any errors
+        // 9a. Log the error message.
+        // 9b. Update the functionCalls document with the appropriate error status and message.
         await admin.firestore().collection('functionCalls').doc(documentId).update({
             'status': status,
             'response.errorMessage': errorMessage,
