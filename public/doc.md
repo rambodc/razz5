@@ -18,6 +18,7 @@
 * __loader__ ```Number```
 * __network__ ```String```
 * __profilePhoto__ ```String```
+* __redirectPath__ ```String```
 * __selectedLog__ ```Object```
 * __thankyou__ ```Number```
 * __themeColors__ ```Object```
@@ -30,6 +31,3 @@
 * __width__ ```Number```
 * __wssSelect__ ```String```
 
-## Patch Functions:
-
-* webShare

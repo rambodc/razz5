@@ -1,29 +1,3 @@
-/*
-Steps of the function:
-
-1. Import required module: 'firebase-admin'.
-2. Export an asynchronous function 'createPost' with parameters: documentId and params.
-3. Extract parameters from the 'params' object: postId, uid, status, postType, isArchived, originalUrl, fileType, fileFormat, title, description, and version.
-4. Define Firestore references for 'functionCalls', 'posts', and 'users' collections.
-5. Get the server timestamp.
-6. Run the entire operation in a Firestore transaction:
-    a. Retrieve the functionCalls document using 'documentId'.
-    b. Check if the function call status is 'processing'. If so, throw an error.
-    c. Retrieve the user's document using the uid from the functionCalls document.
-    d. If the user's document does not exist, throw an error.
-    e. Initialize the 'myPosts' field in the user's document if it does not exist.
-    f. Check if the post already exists in the 'myPosts' array. If so, return.
-    g. Mark the function call as processing.
-    h. Add a new post to the 'myPosts' array with the createdAt timestamp.
-    i. Update the 'myPostCount'.
-    j. Create a new post record.
-    k. Write the post record and update the user's document.
-    l. Update the function call status to 'completed' with the response data.
-7. Catch and handle any errors:
-    a. Log the error message.
-    b. Update the function call document with the appropriate error status and message.
-*/
-
 const admin = require('firebase-admin');
 
 module.exports = async function createPost(documentId, params) {
@@ -33,7 +7,7 @@ module.exports = async function createPost(documentId, params) {
         status, 
         postType, 
         isArchived, 
-        originalUrl, 
+        thumbnailUrl,  // Updated from originalUrl to thumbnailUrl
         fileType, 
         fileFormat, 
         title, 
@@ -45,6 +19,7 @@ module.exports = async function createPost(documentId, params) {
 
     const postDocRef = admin.firestore().collection('posts').doc(postId);
     const functionCallDocRef = admin.firestore().collection('functionCalls').doc(documentId);
+    const postActionsDocRef = admin.firestore().collection('postActions').doc(postId); // New collection for post actions
 
     try {
         console.log(`Starting transaction for documentId: ${documentId}`);
@@ -101,7 +76,7 @@ module.exports = async function createPost(documentId, params) {
                 status: status,
                 postType: postType,
                 isArchived: isArchived,
-                originalUrl: originalUrl,
+                thumbnailUrl: thumbnailUrl,  // Updated from originalUrl to thumbnailUrl
                 fileType: fileType,
                 fileFormat: fileFormat,
                 title: title,
@@ -127,7 +102,7 @@ module.exports = async function createPost(documentId, params) {
                 status: status,
                 postType: postType,
                 isArchived: isArchived,
-                originalUrl: originalUrl,
+                thumbnailUrl: thumbnailUrl,  // Updated from originalUrl to thumbnailUrl
                 fileType: fileType,
                 fileFormat: fileFormat,
                 title: title,
@@ -141,6 +116,21 @@ module.exports = async function createPost(documentId, params) {
             // Perform all writes after all reads
             transaction.set(postDocRef, postRecord);
             transaction.update(userDocRef, { myPosts: userData.myPosts });
+
+            // Create a new document in the postActions collection
+            const postActionRecord = {
+                postId: postId,
+                uid: uid,
+                version: "1.1",
+                status: "uploaded",
+                postType: "general",
+                isArchived: false,
+                thumbnailUrl: thumbnailUrl,  // Updated from originalUrl to thumbnailUrl
+                fileType: fileType,
+                fileFormat: fileFormat,
+                createdAt: serverTimestamp
+            };
+            transaction.set(postActionsDocRef, postActionRecord); // Add the postAction document
 
             // Update function call status to completed within the transaction
             transaction.update(functionCallDocRef, {
