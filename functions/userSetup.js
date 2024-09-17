@@ -98,7 +98,9 @@ module.exports = async function userSetup(documentId, params) {
                 userStatus,
                 emailVerified: emailVerified === 'true',
                 utcOffset,
-                createdAt: admin.firestore.FieldValue.serverTimestamp() // Add the createdAt field
+                createdAt: admin.firestore.FieldValue.serverTimestamp(), // Add the createdAt field
+                key: "string" ,
+                totalRaz: 50
             }, { merge: true });
 
             // 5g. Create empty documents for 'conversation' and 'chats' subcollection for the user.

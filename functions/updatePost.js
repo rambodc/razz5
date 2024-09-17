@@ -4,6 +4,7 @@ module.exports = async function updatePost(documentId, params) {
     const { postId, ...updateFields } = params; // postId is required, the rest are fields to update
 
     const postDocRef = admin.firestore().collection('posts').doc(postId);
+    const postActionsDocRef = admin.firestore().collection('postActions').doc(postId); // Reference for postActions
     const functionCallDocRef = admin.firestore().collection('functionCalls').doc(documentId);
 
     try {
@@ -54,6 +55,10 @@ module.exports = async function updatePost(documentId, params) {
 
             console.log(`Updating post document for postId: ${postId}`);
             transaction.update(postDocRef, postUpdates);
+
+            // Also update the postActions document in the same way
+            console.log(`Updating postActions document for postId: ${postId}`);
+            transaction.update(postActionsDocRef, postUpdates);
 
             // If the post exists in the user's myPosts array, update it there as well
             if (userData && postIndex !== -1) {

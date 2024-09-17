@@ -150,18 +150,6 @@ exports.pinataHandler = functions.firestore
     }
 });
 
-
-exports.updatePostTitleDescHandler = functions.firestore
-    .document('functionCalls/{documentId}')
-    .onCreate(async (snap, context) => {
-        const data = snap.data();
-        if (data.functionName === 'updatePostTitleDesc') {
-            const updatePostTitleDesc = require('./updatePostTitleDesc');
-            await updatePostTitleDesc(context.params.documentId, data.parameters);
-        }
-    });
-
-    
 exports.followHandler = functions.firestore
     .document('functionCalls/{documentId}')
     .onCreate(async (snap, context) => {
@@ -169,5 +157,15 @@ exports.followHandler = functions.firestore
         if (data.functionName === 'follow') {
             const follow = require('./follow');
             await follow(context.params.documentId, data.parameters);
+        }
+    });
+
+    exports.tokenizePostHandler = functions.firestore
+    .document('functionCalls/{documentId}')
+    .onCreate(async (snap, context) => {
+        const data = snap.data();
+        if (data.functionName === 'tokenizePost') {
+            const tokenizePost = require('./tokenizePost');
+            await tokenizePost(context.params.documentId, data.parameters);
         }
     });

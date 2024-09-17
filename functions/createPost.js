@@ -12,7 +12,8 @@ module.exports = async function createPost(documentId, params) {
         fileFormat, 
         title, 
         description, 
-        version 
+        version,
+        totalPostRaz  // New field passed in the params
     } = params;
 
     const MAX_POSTS = 100;  // Maximum number of posts to keep in the array
@@ -95,7 +96,7 @@ module.exports = async function createPost(documentId, params) {
             // Update the myPostCount
             userData.myPosts.myPostCount = userData.myPosts.posts.length;
 
-            // Create new post record
+            // Create new post record with totalPostRaz included
             const postRecord = {
                 postId: postId,
                 uid: uid,
@@ -108,7 +109,8 @@ module.exports = async function createPost(documentId, params) {
                 title: title,
                 description: description,
                 createdAt: serverTimestamp,
-                version: version
+                version: version,
+                totalPostRaz: totalPostRaz  // New field to be stored in the posts doc
             };
 
             console.log(`Writing post record and updating user document for uid: ${userUid}`);
