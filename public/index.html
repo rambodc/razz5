@@ -10,9 +10,9 @@
             color: #fff;
             font-family: Helvetica, Arial, sans-serif;
             overflow: hidden; /* Disable scrolling */
-            position: fixed; /* Prevent resizing */
+            position: fixed;
             width: 100%; /* Full width */
-            height: 100%; /* Full height */
+            height: calc(var(--vh, 1vh) * 100); /* Dynamically adjust height based on viewport */
             top: 0;
             left: 0;
         }
@@ -26,7 +26,7 @@
         }
 
         * {
-            /* disable on touch highlights of html elements, especially on mobile! */
+            /* Disable touch highlights of HTML elements, especially on mobile */
             -webkit-tap-highlight-color: transparent;
             -webkit-touch-callout: none;
             -webkit-user-select: none;
@@ -48,29 +48,36 @@
 <body>
     <canvas id="glcanvas" width="100vw" height="100vh" tabindex="1"></canvas>
 
-    
     <script type="text/javascript" src="js/patch.js" async></script>
-    
 
     <script type="text/javascript">
-
-        function showError(errId, errMsg)
-        {
-            // handle critical errors here if needed
+        // Function to adjust viewport height dynamically based on the window height
+        function setViewportHeight() {
+            const vh = window.innerHeight * 0.01;
+            document.documentElement.style.setProperty('--vh', `${vh}px`);
         }
 
-        function patchInitialized(patch)
-        {
-            // You can now access the patch object (patch), register variable watchers and so on
+        // Adjust viewport height when window is resized or initially loaded
+        window.addEventListener('resize', setViewportHeight);
+        window.addEventListener('load', setViewportHeight);
+
+        // Call the function once to set the initial value
+        setViewportHeight();
+
+        // CABLES.js Patch Initialization
+        function showError(errId, errMsg) {
+            // Handle critical errors here if needed
         }
 
-        function patchFinishedLoading(patch)
-        {
+        function patchInitialized(patch) {
+            // You can now access the patch object (patch), register variable watchers, and so on
+        }
+
+        function patchFinishedLoading(patch) {
             // The patch is ready now, all assets have been loaded
         }
 
-        document.addEventListener("CABLES.jsLoaded", function (event)
-        {
+        document.addEventListener("CABLES.jsLoaded", function (event) {
             CABLES.patch = new CABLES.Patch({
                 patch: CABLES.exportedPatch,
                 "prefixAssetPath": "",
@@ -81,7 +88,7 @@
                 "onError": showError,
                 "onPatchLoaded": patchInitialized,
                 "onFinishedLoading": patchFinishedLoading,
-                "canvas": {"alpha":true, "premultipliedAlpha":true } // make canvas transparent
+                "canvas": {"alpha": true, "premultipliedAlpha": true} // Make canvas transparent
             });
 
             // Define the external function for web share
@@ -107,8 +114,10 @@
             };
         });
 
-        // disable rubberband effect on mobile devices
-        document.getElementById('glcanvas').addEventListener('touchmove', (e)=>{ e.preventDefault(); }, false);
+        // Disable rubberband effect on mobile devices
+        document.getElementById('glcanvas').addEventListener('touchmove', (e) => {
+            e.preventDefault();
+        }, false);
     </script>
 </body>
 </html>
