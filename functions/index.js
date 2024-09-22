@@ -59,17 +59,6 @@ exports.inviteRequestHandler = functions.firestore
         }
     });
 
-exports.transactionsHandler = functions.firestore
-    .document('functionCalls/{documentId}')
-    .onCreate(async (snap, context) => {
-        const data = snap.data();
-        if (data.functionName === 'transactions') {
-            const transactions = require('./transactions');
-            await transactions(context.params.documentId, data.parameters, bucketName, vertexProject, vertexLocation);
-        }
-    });
-
-
 exports.userSetupHandler = functions.firestore
     .document('functionCalls/{documentId}')
     .onCreate(async (snap, context) => {
@@ -167,5 +156,15 @@ exports.followHandler = functions.firestore
         if (data.functionName === 'tokenizePost') {
             const tokenizePost = require('./tokenizePost');
             await tokenizePost(context.params.documentId, data.parameters);
+        }
+    });
+
+    exports.feedCollectHandler = functions.firestore
+    .document('functionCalls/{documentId}')
+    .onCreate(async (snap, context) => {
+        const data = snap.data();
+        if (data.functionName === 'feedCollect') {
+            const feedCollect = require('./feedCollect');
+            await feedCollect(context.params.documentId, data.parameters);
         }
     });

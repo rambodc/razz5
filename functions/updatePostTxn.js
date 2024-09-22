@@ -35,14 +35,14 @@ module.exports = async function updatePostTxn(documentId, params) {
             transaction.update(txnDocRef, {
                 txnHash: txnHash,
                 status: status,
-                updatedAt: serverTimestamp
+                txnHashUpdatedAt: serverTimestamp
             });
 
             // Step 3: Update the post document with the txnHash
             console.log(`Updating post document for postId: ${postId}`);
             transaction.update(postDocRef, {
                 txnHash: txnHash,
-                updatedAt: serverTimestamp
+                txnHashUpdatedAt: serverTimestamp
             });
 
             // Step 4: Mark the function call as completed

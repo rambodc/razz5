@@ -49,8 +49,7 @@ module.exports = async function updatePost(documentId, params) {
 
             // Update post document with the provided fields
             const postUpdates = {
-                ...updateFields, // Apply all provided fields
-                updatedAt: serverTimestamp
+                ...updateFields // Apply all provided fields
             };
 
             console.log(`Updating post document for postId: ${postId}`);
