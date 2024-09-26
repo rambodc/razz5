@@ -30,19 +30,24 @@ module.exports = async function updatePostTxn(documentId, params) {
                 'status': 'processing'
             });
 
-            // Step 2: Update the transaction document with the txnHash and status
+            // Step 2: Update the transaction document with the new xrpl map
             console.log(`Updating transaction document for txnId: ${txnId}`);
             transaction.update(txnDocRef, {
-                txnHash: txnHash,
-                status: status,
-                txnHashUpdatedAt: serverTimestamp
+                xrpl: {
+                    txnHash: txnHash,
+                    status: status,
+                    timestamp: serverTimestamp
+                }
             });
 
-            // Step 3: Update the post document with the txnHash
+            // Step 3: Update the post document with the new xrpl map
             console.log(`Updating post document for postId: ${postId}`);
             transaction.update(postDocRef, {
-                txnHash: txnHash,
-                txnHashUpdatedAt: serverTimestamp
+                xrpl: {
+                    txnHash: txnHash,
+                    status: status,
+                    timestamp: serverTimestamp
+                }
             });
 
             // Step 4: Mark the function call as completed

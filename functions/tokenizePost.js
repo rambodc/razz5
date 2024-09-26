@@ -54,7 +54,8 @@ module.exports = async function tokenizePost(documentId, params) {
 
             // Step 2: Check if the transaction already exists
             if (existingTxnDoc.exists) {
-                throw new Error(`Transaction with txnId ${txnId} already exists.`);
+                console.log(`Transaction with txnId ${txnId} already exists. Skipping transaction creation.`);
+                return; // If the txnId already exists, skip processing
             }
 
             const userData = userDoc.data();

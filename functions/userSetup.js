@@ -182,6 +182,7 @@ module.exports = async function userSetup(documentId, params) {
             uid,
             firstName,
             lastName,
+            username,  
             profilePhotoOriginalUrl,
             profilePhoto200Url,
             profilePhoto400Url,
