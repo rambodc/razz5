@@ -8,6 +8,10 @@
     ],
     "rewrites": [
       {
+        "source": "/posts/**", 
+        "function": "serveStorageFile" 
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }

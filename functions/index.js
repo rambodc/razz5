@@ -168,3 +168,23 @@ exports.followHandler = functions.firestore
             await feedCollect(context.params.documentId, data.parameters);
         }
     });
+
+    exports.updateFeedTxnCollectorHandler = functions.firestore
+    .document('functionCalls/{documentId}')
+    .onCreate(async (snap, context) => {
+        const data = snap.data();
+        if (data.functionName === 'updateFeedTxnCollector') {
+            const updateFeedTxnCollector = require('./updateFeedTxnCollector');
+            await updateFeedTxnCollector(context.params.documentId, data.parameters);
+        }
+    });
+
+    exports.postOpenGraphHandler = functions.firestore
+    .document('functionCalls/{documentId}')
+    .onCreate(async (snap, context) => {
+        const data = snap.data();
+        if (data.functionName === 'postOpenGraph') {
+            const postOpenGraph = require('./postOpenGraph');
+            await postOpenGraph(context.params.documentId, data.parameters);
+        }
+    });
