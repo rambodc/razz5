@@ -1,7 +1,6 @@
 ## Patch Variables:
 
 * __authEmail__ ```String```
-* __editPost__ ```Object```
 * __email__ ```String```
 * __emailVerified__ ```String```
 * __environment__ ```Number```

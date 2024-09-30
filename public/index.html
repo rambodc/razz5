@@ -16,7 +16,7 @@
             top: 0;
             left: 0;
         }
-    
+
         canvas {
             display: block;
             position: absolute;
@@ -112,6 +112,15 @@
                     console.error('Web Share API not supported.');
                 }
             };
+
+            // Add this: Define the scroll to top function
+            CABLES.patch.config.scrollToTop = function () {
+                window.scrollTo({
+                    top: 0,
+                    behavior: "smooth" // You can use 'auto' for instant scroll if needed
+                });
+            };
+
         });
 
         // Disable rubberband effect on mobile devices
