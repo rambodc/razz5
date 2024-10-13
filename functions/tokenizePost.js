@@ -59,7 +59,7 @@ module.exports = async function tokenizePost(documentId, params) {
             }
 
             const userData = userDoc.data();
-            const { myFollowers = { followers: [] }, myFollowing = { following: [] } } = userData;
+            const { myFollowers = { followers: [] }, myFollowing = { following: [] }, myPosts = { posts: [] } } = userData;
 
             // Filter out inactive followers and following
             const followers = myFollowers.followers
@@ -78,7 +78,15 @@ module.exports = async function tokenizePost(documentId, params) {
 
             totalPostRaz += amountRaz; // Update totalPostRaz by adding amountRaz
 
-            // Step 3: Perform all writes after all reads
+            // Step 3: Update the user's myPosts array if the post exists
+            const updatedPosts = myPosts.posts.map(post => {
+                if (post.postId === postId) {
+                    post.status = 'completed';
+                }
+                return post;
+            });
+
+            // Step 4: Perform all writes after all reads
             // Mark the function call as 'processing' within the transaction
             transaction.update(functionCallDocRef, { status: 'processing' });
 
@@ -104,7 +112,7 @@ module.exports = async function tokenizePost(documentId, params) {
                 totalPostRaz: totalPostRaz // Update totalPostRaz in the post document
             }, { merge: true });
 
-            // Update the user's totalRaz and lastPostUpdate
+            // Update the user's totalRaz, lastPostUpdate, and myPosts array
             let { totalRaz = 0 } = userData;
             if (typeof totalRaz !== 'number') {
                 throw new Error(`User document for uid ${uid} does not have a valid totalRaz.`);
@@ -114,7 +122,8 @@ module.exports = async function tokenizePost(documentId, params) {
 
             transaction.update(userDocRef, {
                 totalRaz: totalRaz,
-                lastPostUpdate: serverTimestamp
+                lastPostUpdate: serverTimestamp,
+                'myPosts.posts': updatedPosts
             }, { merge: true });
 
             // Mark the function call as "completed" to finalize the transaction

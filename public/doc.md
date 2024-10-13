@@ -22,7 +22,6 @@
 * __postRaz__ ```Number```
 * __profilePhoto__ ```String```
 * __redirectPath__ ```String```
-* __selectedLog__ ```Object```
 * __splitRaz__ ```Number```
 * __thankyou__ ```Number```
 * __themeColors__ ```Object```
