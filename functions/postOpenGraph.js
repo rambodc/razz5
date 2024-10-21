@@ -60,8 +60,8 @@ module.exports = async function postOpenGraph(documentId, params, bucketName) {
             <!-- Page Style for Background Color and Centering Text -->
             <style>
               body {
-                background-color: #282c30;
-                color: white;
+                background-color: #d0d3db;
+                color: black;
                 font-family: Arial, sans-serif;
                 height: 100vh;
                 margin: 0;
