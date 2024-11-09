@@ -6,6 +6,23 @@ const vertexProject = functions.config().vertex.project;
 const vertexLocation = functions.config().vertex.location;
 const bucketName = functions.config().bucket.name;
 
+
+
+exports.runAI4 = require('./runAI4').runAI4;
+exports.runAI3 = require('./runAI3').runAI3;
+exports.extAddUidPost = require('./extAddUidPost').extAddUidPost;
+exports.extAddUidUser = require('./extAddUidUser').extAddUidUser;
+
+exports.v1UserSetup = require('./v1UserSetup').v1UserSetup;
+exports.v1lastResetTime = require('./v1lastResetTime').v1lastResetTime;
+
+exports.v1UserStatusUpdate = require('./v1UserStatusUpdate').v1UserStatusUpdate;
+
+exports.v1PostOG = require('./v1PostOG').v1PostOG;
+
+
+
+
 // Central functionHandler
 exports.functionHandler = functions.firestore
     .document('functionCalls/{documentId}')
@@ -58,6 +75,8 @@ exports.inviteRequestHandler = functions.firestore
             await inviteRequest(context.params.documentId, data.parameters, bucketName, vertexProject, vertexLocation);
         }
     });
+
+
 
 exports.userSetupHandler = functions.firestore
     .document('functionCalls/{documentId}')
@@ -188,5 +207,3 @@ exports.followHandler = functions.firestore
             await postOpenGraph(context.params.documentId, data.parameters);
         }
     });
-
-    

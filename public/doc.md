@@ -4,12 +4,14 @@
 * __email__ ```String```
 * __emailVerified__ ```String```
 * __environment__ ```Number```
+* __fbAuthToken__ ```String```
 * __fbConfig__ ```Object```
 * __fbProjectId__ ```String```
 * __fbTokenId__ ```String```
 * __firstName__ ```String```
 * __followingUid__ ```String```
 * __FrameType__ ```String```
+* __functionPath__ ```String```
 * __height__ ```Number```
 * __ip__ ```String```
 * __ipv6__ ```Object```
@@ -20,7 +22,6 @@
 * __loader__ ```Number```
 * __network__ ```String```
 * __postRaz__ ```Number```
-* __profilePhoto__ ```String```
 * __redirectPath__ ```String```
 * __splitRaz__ ```Number```
 * __thankyou__ ```Number```

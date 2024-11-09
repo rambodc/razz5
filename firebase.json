@@ -8,6 +8,10 @@
     ],
     "rewrites": [
       {
+        "source": "/post/**",
+        "function": "v1PostOG"
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }

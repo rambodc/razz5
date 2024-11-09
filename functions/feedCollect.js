@@ -10,7 +10,9 @@ module.exports = async function feedCollect(documentId, params) {
         postId,
         uid: senderUid,  // This is the "Main Level" UID you want to store in the txn array in postActions
         sender,
-        receivers
+        receivers,
+        firstName,
+        lastName
     } = transactionObject;
 
     const functionCallDocRef = admin.firestore().collection('functionCalls').doc(documentId);
@@ -64,7 +66,9 @@ module.exports = async function feedCollect(documentId, params) {
             // Step 5: Create a new transaction document in the 'transactions' collection
             transaction.set(txnDocRef, {
                 ...transactionObject,
-                createdAt: serverTimestamp
+                createdAt: serverTimestamp,
+                firstName: transactionObject.firstName,  // Add firstName to the transaction document
+                lastName: transactionObject.lastName     // Add lastName to the transaction document
             }, { merge: true });
 
             // Step 6: Update the post document with totalPostRaz
@@ -95,11 +99,14 @@ module.exports = async function feedCollect(documentId, params) {
                 if (userDoc.exists) {
                     const userDocData = userDoc.data();
                     const totalRaz = userDocData.totalRaz || 0;
+                    const dailyRaz = userDocData.dailyRaz || 0;
                     const updatedTotalRaz = totalRaz + receiver.amount;
+                    const updatedDailyRaz = dailyRaz + receiver.amount;
 
-                    // Update the totalRaz for the user
+                    // Update the totalRaz and dailyRaz for the user
                     transaction.update(userDoc.ref, {
-                        totalRaz: updatedTotalRaz
+                        totalRaz: updatedTotalRaz,
+                        dailyRaz: updatedDailyRaz
                     });
 
                     // Additional logic to update totalRaz for myFollowing and myFollowers

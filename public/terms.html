@@ -3,18 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>About Us - Razzberry</title>
+    <title>Terms of Service - Razzberry</title>
     <style>
         body {
-            background-color: #282c30;
-            color: white;
+            background-color: #d0d3db;
+            color: #333;
             font-family: Arial, sans-serif;
             margin: 0;
             padding: 0;
         }
 
         .navbar {
-            background-color: rgba(40, 44, 48, 0.8); /* Semi-transparent background */
+            background-color: #333;
             overflow: hidden;
             text-align: center;
             position: fixed;
@@ -22,63 +22,109 @@
             width: 100%;
             z-index: 1000;
             padding: 10px 0;
-            backdrop-filter: blur(10px);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
         }
 
         .navbar a {
             display: inline-block;
             color: #f2f2f2;
             text-align: center;
-            padding: 14px 20px;
+            padding: 10px 15px;
             text-decoration: none;
-            font-size: 17px;
+            font-size: 16px;
         }
 
         .navbar a:hover, .navbar a.active {
-            border-bottom: 2px solid #f2f2f2;
+            background-color: #575757;
+            color: #fff;
+            transition: background-color 0.3s;
         }
 
         .content {
-            max-width: 500px;
-            margin: 80px auto 20px;
+            max-width: 800px;
+            margin: 100px auto 20px;
             padding: 20px;
             text-align: left;
-        }
-
-        img {
-            max-width: 100%;
-            height: auto;
-            margin-bottom: 30px;
-            display: block;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         }
 
         h1 {
             text-align: center;
-            font-size: 2em;
+            font-size: 2.2em;
             margin-bottom: 20px;
         }
 
+        h2 {
+            font-size: 1.5em;
+            margin-bottom: 15px;
+        }
+
         p {
-            font-size: 1.1em;
-            line-height: 1.6;
+            font-size: 1em;
+            line-height: 1.8;
             margin-bottom: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .navbar a {
+                padding: 8px 10px;
+                font-size: 14px;
+            }
+
+            .content {
+                margin: 80px 15px 20px;
+                padding: 15px;
+            }
+
+            h1 {
+                font-size: 1.8em;
+            }
+
+            p {
+                font-size: 0.9em;
+            }
         }
     </style>
 </head>
 <body>
     <div class="navbar">
-        <a href="index.html">Home</a>
-        <a href="about.html" class="active">About</a>
+        <a href="#" style="color: #fff; background-color: #007bff; padding: 10px 20px; border-radius: 5px;">Login</a>
+        <a href="about.html">About</a>
         <a href="team.html">Team</a>
-        <a href="contact.html">Contact</a>
+        <a href="terms.html" class="active">Terms</a>
+        <a href="policy.html">Policy</a>
     </div>
 
     <div class="content">
-        <h1> Terms of Service</h1>
-        <img src="https://razz5-14781.firebaseapp.com/assets/RazzberryLogoDark.png" alt="Razzberry Logo">
-        <p>
-            Terms of Service
-        </p>
+        <h1>Terms of Service</h1>
+
+        <h2>1. Introduction</h2>
+        <p>Welcome to Razzberry! By accessing or using our platform, you agree to be bound by these Terms of Service. Please read them carefully. If you do not agree to these terms, you should not use our services.</p>
+
+        <h2>2. User Accounts</h2>
+        <p>To use some features of our platform, you may be required to create an account. You are responsible for maintaining the confidentiality of your account credentials and for all activities that occur under your account. You agree to notify us immediately if you suspect unauthorized use of your account.</p>
+
+        <h2>3. Acceptable Use</h2>
+        <p>You agree not to use the Razzberry platform for any unlawful purpose or in a way that could harm or impair others' enjoyment of our services. You must not upload, post, or otherwise transmit any content that is offensive, abusive, defamatory, or infringes on another's rights.</p>
+
+        <h2>4. Content Ownership</h2>
+        <p>All content you create on Razzberry is tokenized and associated with your account. By using our platform, you grant Razzberry a non-exclusive license to use, modify, and display your content for the purpose of operating and promoting the platform.</p>
+
+        <h2>5. Termination</h2>
+        <p>We reserve the right to suspend or terminate your account at any time, for any reason, including but not limited to violation of these Terms of Service. Upon termination, your right to use the platform will cease immediately.</p>
+
+        <h2>6. Limitation of Liability</h2>
+        <p>Razzberry will not be liable for any indirect, incidental, special, or consequential damages arising out of or in connection with your use of the platform. Your use of the platform is at your own risk.</p>
+
+        <h2>7. Changes to Terms</h2>
+        <p>We reserve the right to modify these Terms of Service at any time. Any changes will be effective immediately upon posting. Your continued use of the platform after changes are posted constitutes your acceptance of the revised terms.</p>
+
+        <h2>8. Governing Law</h2>
+        <p>These Terms of Service shall be governed by and construed in accordance with the laws of [Your Country]. Any disputes arising under these terms shall be subject to the exclusive jurisdiction of the courts of Canada.</p>
+
+        <p>If you have any questions about these Terms of Service, please contact us at support@razzberry.ai.</p>
     </div>
 </body>
 </html>

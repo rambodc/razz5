@@ -6,7 +6,9 @@ module.exports = async function tokenizePost(documentId, params) {
         uid, // from the first level of params
         postId, // from the first level of params
         txnId, // provided txnId
-        amountRaz // a number with decimal points
+        amountRaz, // a number with decimal points
+        firstName, // added firstName
+        lastName // added lastName
     } = params;
 
     const functionCallDocRef = admin.firestore().collection('functionCalls').doc(documentId);
@@ -95,6 +97,8 @@ module.exports = async function tokenizePost(documentId, params) {
                 ...transactionObject,
                 txnId,
                 createdAt: serverTimestamp,
+                firstName: firstName, // Add firstName to the transaction document
+                lastName: lastName,   // Add lastName to the transaction document
                 status: 'initialized'
             }, { merge: true });
 
@@ -112,16 +116,18 @@ module.exports = async function tokenizePost(documentId, params) {
                 totalPostRaz: totalPostRaz // Update totalPostRaz in the post document
             }, { merge: true });
 
-            // Update the user's totalRaz, lastPostUpdate, and myPosts array
-            let { totalRaz = 0 } = userData;
-            if (typeof totalRaz !== 'number') {
-                throw new Error(`User document for uid ${uid} does not have a valid totalRaz.`);
+            // Update the user's totalRaz, dailyRaz, lastPostUpdate, and myPosts array
+            let { totalRaz = 0, dailyRaz = 0 } = userData;
+            if (typeof totalRaz !== 'number' || typeof dailyRaz !== 'number') {
+                throw new Error(`User document for uid ${uid} does not have valid totalRaz or dailyRaz.`);
             }
 
             totalRaz += amountRaz;
+            dailyRaz += amountRaz;
 
             transaction.update(userDocRef, {
                 totalRaz: totalRaz,
+                dailyRaz: dailyRaz,
                 lastPostUpdate: serverTimestamp,
                 'myPosts.posts': updatedPosts
             }, { merge: true });

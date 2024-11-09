@@ -3,18 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>About Us - Razzberry</title>
+    <title>Privacy Policy - Razzberry</title>
     <style>
         body {
-            background-color: #282c30;
-            color: white;
+            background-color: #d0d3db;
+            color: #333;
             font-family: Arial, sans-serif;
             margin: 0;
             padding: 0;
         }
 
         .navbar {
-            background-color: rgba(40, 44, 48, 0.8); /* Semi-transparent background */
+            background-color: #333;
             overflow: hidden;
             text-align: center;
             position: fixed;
@@ -22,63 +22,107 @@
             width: 100%;
             z-index: 1000;
             padding: 10px 0;
-            backdrop-filter: blur(10px);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
         }
 
         .navbar a {
             display: inline-block;
             color: #f2f2f2;
             text-align: center;
-            padding: 14px 20px;
+            padding: 10px 15px;
             text-decoration: none;
-            font-size: 17px;
+            font-size: 16px;
         }
 
         .navbar a:hover, .navbar a.active {
-            border-bottom: 2px solid #f2f2f2;
+            background-color: #575757;
+            color: #fff;
+            transition: background-color 0.3s;
         }
 
         .content {
-            max-width: 500px;
-            margin: 80px auto 20px;
+            max-width: 800px;
+            margin: 100px auto 20px;
             padding: 20px;
             text-align: left;
-        }
-
-        img {
-            max-width: 100%;
-            height: auto;
-            margin-bottom: 30px;
-            display: block;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         }
 
         h1 {
             text-align: center;
-            font-size: 2em;
+            font-size: 2.2em;
             margin-bottom: 20px;
         }
 
+        h2 {
+            font-size: 1.5em;
+            margin-bottom: 15px;
+        }
+
         p {
-            font-size: 1.1em;
-            line-height: 1.6;
+            font-size: 1em;
+            line-height: 1.8;
             margin-bottom: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .navbar a {
+                padding: 8px 10px;
+                font-size: 14px;
+            }
+
+            .content {
+                margin: 80px 15px 20px;
+                padding: 15px;
+            }
+
+            h1 {
+                font-size: 1.8em;
+            }
+
+            p {
+                font-size: 0.9em;
+            }
         }
     </style>
 </head>
 <body>
     <div class="navbar">
-        <a href="index.html">Home</a>
-        <a href="about.html" class="active">About</a>
+        <a href="#" style="color: #fff; background-color: #007bff; padding: 10px 20px; border-radius: 5px;">Login</a>
+        <a href="about.html">About</a>
         <a href="team.html">Team</a>
-        <a href="contact.html">Contact</a>
+        <a href="terms.html">Terms</a>
+        <a href="policy.html" class="active">Policy</a>
     </div>
 
     <div class="content">
         <h1>Privacy Policy</h1>
-        <img src="https://razz5-14781.firebaseapp.com/assets/RazzberryLogoDark.png" alt="Razzberry Logo">
-        <p>
-            Privacy Policy    
-        </p>
+
+        <h2>1. Introduction</h2>
+        <p>Razzberry respects your privacy and is committed to protecting your personal information. This Privacy Policy outlines the types of data we collect, how we use it, and the measures we take to safeguard your information.</p>
+
+        <h2>2. Information We Collect</h2>
+        <p>We collect information that you provide directly to us, such as when you create an account, post content, or contact our support team. This may include your name, email address, and any other details you choose to share.</p>
+
+        <h2>3. How We Use Your Information</h2>
+        <p>Your information is used to provide, maintain, and improve our services. We may use your data to personalize your experience, communicate with you, and ensure the security of our platform. We do not sell your personal information to third parties.</p>
+
+        <h2>4. Sharing of Information</h2>
+        <p>We may share your information with trusted third-party service providers who assist us in operating our platform, as well as when required by law or to protect the rights and safety of Razzberry and its users.</p>
+
+        <h2>5. Data Security</h2>
+        <p>We take reasonable measures to protect your personal information from unauthorized access, alteration, or destruction. However, please be aware that no method of transmission over the internet is completely secure.</p>
+
+        <h2>6. Your Rights</h2>
+        <p>You have the right to access, correct, or delete your personal information. If you wish to exercise any of these rights, please contact us at support@razzberry.ai.</p>
+
+        <h2>7. Changes to This Policy</h2>
+        <p>We may update this Privacy Policy from time to time. Any changes will be posted on this page, and we encourage you to review it periodically. Your continued use of the platform constitutes acceptance of any changes.</p>
+
+        <h2>8. Contact Us</h2>
+        <p>If you have any questions or concerns regarding our Privacy Policy, please contact us at support@razzberry.ai.</p>
     </div>
 </body>
 </html>

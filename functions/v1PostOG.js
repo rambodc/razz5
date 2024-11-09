@@ -1,21 +1,47 @@
+// Firebase Cloud Function: v1PostOG.js
+const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 const { Storage } = require('@google-cloud/storage');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const functions = require('firebase-functions');
+
+// Only initialize Firebase Admin if it hasn't been initialized
+if (!admin.apps.length) {
+    admin.initializeApp();
+}
 
 // Initialize Google Cloud Storage with project ID from environment variables
 const storage = new Storage({ projectId: functions.config().project_id });
 
-module.exports = async function postOpenGraph(documentId, params, bucketName) {
-    const { postId, title, description, image, ogUrl, redirectUrl, refresh } = params;
+module.exports.v1PostOG = functions.https.onRequest(async (req, res) => {
+    // Set CORS headers for preflight requests
+    const allowedOrigin = functions.config().cors.origin || '*';
+    res.set('Access-Control-Allow-Origin', allowedOrigin);
+    res.set('Access-Control-Allow-Methods', 'GET, POST');
+    res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+    if (req.method === "OPTIONS") {
+        // Handle preflight request
+        res.status(204).send('');
+        return;
+    }
+
+    if (req.method !== "POST") {
+        return res.status(405).send("Method Not Allowed");
+    }
+
+    // Extract necessary parameters from the request body
+    const { postId, title, description, image, ogUrl, redirectUrl, refresh } = req.body;
+
+    if (!postId || !title || !description || !image || !ogUrl || !redirectUrl || refresh === undefined) {
+        return res.status(400).send("Missing required parameters");
+    }
 
     const postDocRef = admin.firestore().collection('posts').doc(postId);
-    const functionCallDocRef = admin.firestore().collection('functionCalls').doc(documentId);
 
     try {
-        console.log(`Starting postOpenGraph function for documentId: ${documentId}`);
+        console.log(`Starting v1PostOG function for postId: ${postId}`);
 
         // Get the server timestamp
         const serverTimestamp = admin.firestore.FieldValue.serverTimestamp();
@@ -102,11 +128,11 @@ module.exports = async function postOpenGraph(documentId, params, bucketName) {
         fs.writeFileSync(tempFilePath, indexHtmlContent, 'utf8');
 
         // Define the full bucket name and file path in Cloud Storage (posts/${postId}/og/index.html)
-        const fullBucketName = `${bucketName}.appspot.com`;
+        const fullBucketName = functions.config().storage.bucket;
+        const bucket = storage.bucket(fullBucketName);
         const destinationPath = `posts/${postId}/og/index.html`;
 
         // Step 4: Upload the index.html file to Cloud Storage
-        const bucket = storage.bucket(fullBucketName);
         await bucket.upload(tempFilePath, {
             destination: destinationPath,
             metadata: {
@@ -119,31 +145,10 @@ module.exports = async function postOpenGraph(documentId, params, bucketName) {
         // Cleanup: Remove the temporary file
         fs.unlinkSync(tempFilePath);
 
-        // Step 5: Mark the function call as completed
-        await functionCallDocRef.update({
-            status: 'completed',
-            'response.result': 'success',
-            'response.data': { postId, ogUrl, redirectUrl },
-            'response.completed': serverTimestamp
-        });
-
-        console.log(`postOpenGraph function completed successfully for documentId: ${documentId}`);
+        // Respond with success message
+        return res.status(200).send({ status: "success", message: "Open Graph page created successfully", postId, ogUrl, redirectUrl });
     } catch (error) {
-        console.error(`Error in postOpenGraph function for documentId: ${documentId}: ${error.message}`);
-
-        let status = 'error';
-        let errorMessage = error.message;
-
-        if (error.message.includes('already being processed')) {
-            status = 'concurrencyError';
-            errorMessage = 'Function call hit concurrency issue';
-        }
-
-        // Step 6: Update the function call status to error or concurrencyError
-        await functionCallDocRef.update({
-            status: status,
-            'response.errorMessage': errorMessage,
-            'response.error': admin.firestore.FieldValue.serverTimestamp()
-        });
+        console.error(`Error in v1PostOG function for postId: ${postId}: ${error.message}`);
+        return res.status(500).send({ status: "error", message: error.message });
     }
-};
+});

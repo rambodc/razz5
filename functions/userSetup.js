@@ -4,7 +4,7 @@ const sharp = require('sharp');
 const path = require('path');
 
 module.exports = async function userSetup(documentId, params) {
-    const { uid, firstName, lastName, email, userType, userStatus, emailVerified, utcOffset } = params;
+    const { uid, firstName, lastName, email, userType, userStatus, emailVerified, utcOffset, lastResetTime, dailyRaz } = params;
 
     const functionCallRef = admin.firestore().collection('functionCalls').doc(documentId);
     const userRef = admin.firestore().collection('users').doc(uid);
@@ -70,6 +70,8 @@ module.exports = async function userSetup(documentId, params) {
                 userStatus,
                 emailVerified: emailVerified === 'true',
                 utcOffset,
+                lastResetTime,  // Add the new lastResetTime field
+                dailyRaz: Number(dailyRaz), // Ensure dailyRaz is a number
                 createdAt: admin.firestore.FieldValue.serverTimestamp(),
                 key: "string",
                 totalRaz: 50
