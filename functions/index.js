@@ -20,6 +20,10 @@ exports.v1UserStatusUpdate = require('./v1UserStatusUpdate').v1UserStatusUpdate;
 
 exports.v1PostOG = require('./v1PostOG').v1PostOG;
 
+exports.v1PostOGLink = require('./v1PostOGLink').v1PostOGLink;
+
+
+
 
 
 

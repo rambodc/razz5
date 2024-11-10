@@ -9,7 +9,7 @@
     "rewrites": [
       {
         "source": "/post/**",
-        "function": "v1PostOG"
+        "function": "v1PostOGLink"
       },
       {
         "source": "**",
