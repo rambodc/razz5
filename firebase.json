@@ -12,6 +12,10 @@
         "function": "v1PostOGLink"
       },
       {
+        "source": "/main/**",
+        "destination": "/main"
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }
