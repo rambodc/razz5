@@ -13,16 +13,27 @@ exports.runAI3 = require('./runAI3').runAI3;
 exports.extAddUidPost = require('./extAddUidPost').extAddUidPost;
 exports.extAddUidUser = require('./extAddUidUser').extAddUidUser;
 
-exports.v1UserSetup = require('./v1UserSetup').v1UserSetup;
-exports.v1lastResetTime = require('./v1lastResetTime').v1lastResetTime;
+exports.v1_user_setup = require('./v1_user_setup').v1_user_setup;
 
-exports.v1UserStatusUpdate = require('./v1UserStatusUpdate').v1UserStatusUpdate;
+exports.v1_last_reset_time = require('./v1_last_reset_time').v1_last_reset_time;
 
-exports.v1PostOG = require('./v1PostOG').v1PostOG;
+exports.v1_post_og_page = require('./v1_post_og_page').v1_post_og_page;
 
-exports.v1PostOGLink = require('./v1PostOGLink').v1PostOGLink;
+exports.v1_update_email = require('./v1_update_email').v1_update_email;
 
+exports.v1_update_utc_offset = require('./v1_update_utc_offset').v1_update_utc_offset;
 
+exports.v1_update_email_verified = require('./v1_update_email_verified').v1_update_email_verified;
+
+exports.v1_create_new_chat = require('./v1_create_new_chat').v1_create_new_chat;
+
+exports.v1_update_chat = require('./v1_update_chat').v1_update_chat;
+
+exports.v1_pinata_upload = require('./v1_pinata_upload').v1_pinata_upload;
+
+exports.v1_create_post = require('./v1_create_post').v1_create_post;
+
+exports.v1_resize_file = require('./v1_resize_file').v1_resize_file;
 
 
 
