@@ -1,11 +1,11 @@
-// Firebase Cloud Function: v1_resize_file_audio_support.js
+// Firebase Cloud Function: v1_resize_file.js (Updated Version with Requested Changes)
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const ffmpeg = require('fluent-ffmpeg');
-const { createCanvas } = require('canvas');
+const { loadImage, createCanvas } = require('canvas');
 
 // Only initialize Firebase Admin if it hasn't been initialized
 if (!admin.apps.length) {
@@ -36,10 +36,10 @@ async function initialize_and_check(req, res) {
     }
 
     // Extract necessary parameters from the request body
-    const { uid, post_id } = req.body;
+    const { uid, post_id, file_format } = req.body;
 
-    if (!uid || !post_id) {
-        res.status(400).send("Missing required parameters: uid or post_id");
+    if (!uid || !post_id || !file_format) {
+        res.status(400).send("Missing required parameters: uid, post_id, or file_format");
         return { proceed: false };
     }
 
@@ -94,7 +94,7 @@ async function initialize_and_check(req, res) {
             "general.total_actions_today": total_actions_today
         });
 
-        return { proceed: true, uid, post_id };
+        return { proceed: true, uid, post_id, file_format };
     } catch (error) {
         console.error(`Error during initialization and checks: ${error.message}`);
         res.status(500).send({ status: "error", message: error.message });
@@ -108,37 +108,27 @@ module.exports.v1_resize_file = functions.https.onRequest(async (req, res) => {
         return;
     }
 
-    const { uid, post_id } = init_result;
+    const { uid, post_id, file_format } = init_result;
 
     const bucket_name = functions.config().storage.bucket;
     const bucket = storage.bucket(bucket_name);
     const original_file_path = `posts/${post_id}/original/${post_id}_original`;
     const temp_original_file_path = path.join(os.tmpdir(), `${post_id}_original`);
-    const metadata_file_path = `posts/${post_id}/resized/resized_metadata.json`;
 
     let metadata = {
         post_id: post_id,
         status: "in-progress",
-        attempts: 0,
+        type: "",
+        total_attempts: 0,
         resized_files: [],
-        error_logs: []
+        error_message: "",
+        last_attempt: {
+            timestamp: null,
+            result: null
+        }
     };
 
     try {
-        // Attempt to load existing metadata if it exists
-        const [metadataExists] = await bucket.file(metadata_file_path).exists();
-        if (metadataExists) {
-            const metadataBuffer = await bucket.file(metadata_file_path).download();
-            metadata = JSON.parse(metadataBuffer.toString());
-        }
-
-        // Increment attempt count and update status
-        metadata.attempts += 1;
-        metadata.status = "in-progress";
-        await bucket.file(metadata_file_path).save(JSON.stringify(metadata), {
-            contentType: 'application/json'
-        });
-
         console.log("Reconstructing file path from Cloud Storage");
         const file = bucket.file(original_file_path);
         console.log(`Attempting to download file from path: ${original_file_path}`);
@@ -152,35 +142,60 @@ module.exports.v1_resize_file = functions.https.onRequest(async (req, res) => {
         await file.download({ destination: temp_original_file_path });
         console.log("File downloaded successfully");
 
-        // Use FFmpeg to determine file type
-        console.log("Determining file type using FFmpeg");
-        let hasVideoStream = false;
-        let hasAudioStream = false;
-        await new Promise((resolve, reject) => {
-            ffmpeg.ffprobe(temp_original_file_path, (err, metadata) => {
-                if (err) {
-                    console.error('Error while probing file:', err);
-                    reject(new Error('Unable to determine file type using FFmpeg'));
-                } else {
-                    console.log('File metadata:', metadata);
-                    if (metadata.streams) {
-                        const videoStream = metadata.streams.find(stream => stream.codec_type === 'video');
-                        if (videoStream) {
-                            hasVideoStream = true;
-                        }
-                        hasAudioStream = metadata.streams.some(stream => stream.codec_type === 'audio');
-                    }
-                    resolve();
-                }
-            });
-        });
+        // Retrieve metadata to determine file type
+        const [fileMetadata] = await file.getMetadata();
+        const fileType = fileMetadata.contentType.split('/')[0];
+        console.log(`File type determined: ${fileType}`);
 
+        metadata.total_attempts += 1;
+        metadata.last_attempt.timestamp = new Date().toISOString();
         let resized_paths = [];
 
-        if (hasVideoStream) {
+        if (fileType === 'image') {
+            console.log("Resizing image to fit within 800x800 while maintaining aspect ratio");
+
+            // Resize image to fit within 800x800 while maintaining aspect ratio
+            const image = await loadImage(temp_original_file_path);
+            let width = image.width;
+            let height = image.height;
+            if (width > 800 || height > 800) {
+                if (width > height) {
+                    height *= 800 / width;
+                    width = 800;
+                } else {
+                    width *= 800 / height;
+                    height = 800;
+                }
+            }
+
+            const canvas = createCanvas(width, height);
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(image, 0, 0, width, height);
+
+            const resized_image_file_path = path.join(os.tmpdir(), `${post_id}_resized.png`);
+            const buffer = canvas.toBuffer('image/png');
+            fs.writeFileSync(resized_image_file_path, buffer);
+
+            console.log("Uploading resized image to Cloud Storage");
+            const resized_image_storage_path = `posts/${post_id}/resized/${post_id}_resized.png`;
+            await bucket.upload(resized_image_file_path, {
+                destination: resized_image_storage_path,
+                metadata: {
+                    contentType: 'image/png'
+                }
+            });
+
+            console.log("Resized image uploaded successfully");
+            resized_paths.push(resized_image_storage_path);
+            metadata.resized_files.push({
+                file_name: `${post_id}_resized.png`,
+                type: "image",
+                status: "success",
+                output_path: resized_image_storage_path
+            });
+        } else if (fileType === 'video') {
             console.log("Resizing video file with adaptive scaling to maintain aspect ratio");
 
-            // Resize video while maintaining aspect ratio, fitting within 1920x1080 max bounds
             const resized_file_path = path.join(os.tmpdir(), `${post_id}_resized.mp4`);
             await new Promise((resolve, reject) => {
                 ffmpeg(temp_original_file_path)
@@ -190,7 +205,7 @@ module.exports.v1_resize_file = functions.https.onRequest(async (req, res) => {
                         '-vf', "scale='min(1920,iw)':'min(1080,ih)':force_original_aspect_ratio=decrease",
                         '-preset', 'slow',
                         '-crf', '23',
-                        '-pix_fmt', 'yuv420p' // Ensures compatibility with most players
+                        '-pix_fmt', 'yuv420p'
                     ])
                     .output(resized_file_path)
                     .on('end', resolve)
@@ -212,18 +227,16 @@ module.exports.v1_resize_file = functions.https.onRequest(async (req, res) => {
             metadata.resized_files.push({
                 file_name: `${post_id}_resized.mp4`,
                 type: "video",
-                status: "success"
+                status: "success",
+                output_path: resized_storage_path
             });
-        } 
-
-        if (hasAudioStream && !hasVideoStream) {
+        } else if (fileType === 'audio') {
             console.log("Processing audio file to convert to mp3 format");
 
-            // Convert to mp3 format
             const resized_audio_file_path = path.join(os.tmpdir(), `${post_id}_audio.mp3`);
             await new Promise((resolve, reject) => {
                 ffmpeg(temp_original_file_path)
-                    .outputOptions('-q:a', '2') // High quality audio
+                    .outputOptions('-q:a', '2')
                     .output(resized_audio_file_path)
                     .on('end', resolve)
                     .on('error', reject)
@@ -244,64 +257,62 @@ module.exports.v1_resize_file = functions.https.onRequest(async (req, res) => {
             metadata.resized_files.push({
                 file_name: `${post_id}_audio.mp3`,
                 type: "audio",
-                status: "success"
+                status: "success",
+                output_path: resized_audio_storage_path
             });
-        } 
+        } else {
+            console.log("Unsupported file type, creating a placeholder thumbnail");
 
-        if (!hasVideoStream && !hasAudioStream) {
-            throw new Error('Unsupported file type for resizing: No video or audio stream found');
+            const canvas = createCanvas(800, 800);
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#a8a8a8';
+            ctx.fillRect(0, 0, 800, 800);
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = 'bold 80px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(file_format.toUpperCase(), 400, 400); // Add file format only
+
+            const thumbnail_path = path.join(os.tmpdir(), `${post_id}_resized.png`);
+            const buffer = canvas.toBuffer('image/png');
+            fs.writeFileSync(thumbnail_path, buffer);
+
+            const thumbnail_storage_path = `posts/${post_id}/resized/${post_id}_resized.png`;
+            await bucket.upload(thumbnail_path, {
+                destination: thumbnail_storage_path,
+                metadata: {
+                    contentType: 'image/png'
+                }
+            });
+
+            metadata.resized_files.push({
+                file_name: `${post_id}_thumbnail.png`,
+                type: "thumbnail",
+                status: "success",
+                output_path: thumbnail_storage_path
+            });
         }
 
-        // Update metadata file with success status
         metadata.status = "completed";
-        await bucket.file(metadata_file_path).save(JSON.stringify(metadata), {
-            contentType: 'application/json'
-        });
+        metadata.type = fileType === 'image' ? 'image' : fileType === 'video' ? 'video' : fileType === 'audio' ? 'audio' : 'thumbnail';
+        metadata.last_attempt.result = "success";
+
+        // Update Firestore document in the posts collection
+        const postRef = admin.firestore().collection('posts').doc(post_id);
+        await postRef.set({ resized: metadata }, { merge: true });
 
         res.status(200).send({ status: "success", message: "File processed and uploaded successfully", resized_paths });
     } catch (error) {
         console.error(`Error in v1_resize_file function: ${error.message}`);
 
-        // Update metadata file with failure status and error log
         metadata.status = "failed";
-        metadata.error_logs.push({
-            attempt: metadata.attempts,
-            message: error.message,
-            timestamp: new Date().toISOString()
-        });
+        metadata.type = fileType === 'image' ? 'image' : fileType === 'video' ? 'video' : fileType === 'audio' ? 'audio' : 'thumbnail';
+        metadata.last_attempt.result = "error";
+        metadata.error_message = error.message;
 
-        // Create thumbnail image on failure
-        const canvas = createCanvas(800, 800);
-        const ctx = canvas.getContext('2d');
-        ctx.fillStyle = '#808080'; // Gray background
-        ctx.fillRect(0, 0, 800, 800);
-        ctx.fillStyle = '#FFFFFF'; // White text
-        ctx.font = 'bold 80px Arial';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(path.extname(temp_original_file_path).slice(1).toUpperCase(), 400, 400);
-
-        const thumbnail_path = path.join(os.tmpdir(), `${post_id}_800x800.png`);
-        const buffer = canvas.toBuffer('image/png');
-        fs.writeFileSync(thumbnail_path, buffer);
-
-        const thumbnail_storage_path = `posts/${post_id}/resized/${post_id}_800x800.png`;
-        await bucket.upload(thumbnail_path, {
-            destination: thumbnail_storage_path,
-            metadata: {
-                contentType: 'image/png'
-            }
-        });
-
-        metadata.resized_files.push({
-            file_name: `${post_id}_800x800.png`,
-            type: "thumbnail",
-            status: "created_on_failure"
-        });
-
-        await bucket.file(metadata_file_path).save(JSON.stringify(metadata), {
-            contentType: 'application/json'
-        });
+        // Update Firestore document in the posts collection with failure metadata
+        const postRef = admin.firestore().collection('posts').doc(post_id);
+        await postRef.set({ resized: metadata }, { merge: true });
 
         res.status(500).send({ status: "error", message: error.message });
     }

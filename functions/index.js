@@ -35,6 +35,7 @@ exports.v1_create_post = require('./v1_create_post').v1_create_post;
 
 exports.v1_resize_file = require('./v1_resize_file').v1_resize_file;
 
+exports.v1_update_post = require('./v1_update_post').v1_update_post;
 
 
 

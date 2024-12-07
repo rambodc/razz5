@@ -1,4 +1,4 @@
-// Firebase Cloud Function: v1_create_post.js
+// Firebase Cloud Function: v1_update_post.js
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 
@@ -89,65 +89,69 @@ async function initialize_and_check(req, res) {
     }
 }
 
-module.exports.v1_create_post = functions.https.onRequest(async (req, res) => {
+module.exports.v1_update_post = functions.https.onRequest(async (req, res) => {
     const init_result = await initialize_and_check(req, res);
     if (!init_result.proceed) {
         return;
     }
 
     const { uid } = init_result;
-    const { ...post_data } = req.body;
+    const { object_name, update_user, post_id, ...update_data } = req.body;
+
+    if (!post_id) {
+        res.status(400).send("Missing required parameter: post_id");
+        return;
+    }
+
+    if (!object_name) {
+        res.status(400).send("Missing required parameter: object_name");
+        return;
+    }
 
     try {
-        // Generate a new post_id automatically
-        const posts_ref = admin.firestore().collection('posts');
-        const new_post_ref = posts_ref.doc();
-        const post_id = new_post_ref.id;
-
-        // Create the post document with provided data and additional fields inside "general" object
-        await new_post_ref.set({
-            general: {
-                ...post_data,
-                post_id,
-                created_at: admin.firestore.Timestamp.now()
+        // Update the specific object in the posts collection
+        const post_ref = admin.firestore().collection('posts').doc(post_id);
+        await post_ref.set({
+            [object_name]: {
+                ...update_data
             }
         }, { merge: true });
 
-        // Start a transaction to update user data
-        const user_ref = admin.firestore().collection('users').doc(uid);
-        await admin.firestore().runTransaction(async (transaction) => {
-            const user_doc = await transaction.get(user_ref);
-            if (!user_doc.exists) {
-                throw new Error('User document does not exist.');
-            }
+        if (update_user) {
+            // Start a transaction to update user's post data
+            const user_ref = admin.firestore().collection('users').doc(uid);
+            await admin.firestore().runTransaction(async (transaction) => {
+                const user_doc = await transaction.get(user_ref);
+                if (!user_doc.exists) {
+                    throw new Error('User document does not exist.');
+                }
 
-            let user_data = user_doc.data();
-            if (!user_data.my_posts) {
-                user_data.my_posts = { posts: [] };
-            }
+                let user_data = user_doc.data();
+                if (!user_data.my_posts || !user_data.my_posts.posts) {
+                    throw new Error('User posts data does not exist.');
+                }
 
-            // Add new post data to user's my_posts array
-            user_data.my_posts.posts.unshift({
-                post_id,
-                ...post_data,
-                created_at: admin.firestore.Timestamp.now()
+                // Find the specific post in user's my_posts array and update it
+                const post_index = user_data.my_posts.posts.findIndex(post => post.post_id === post_id);
+                if (post_index === -1) {
+                    throw new Error('Post not found in user data.');
+                }
+
+                // Update the post fields at the first level (not inside an object like "general")
+                user_data.my_posts.posts[post_index] = {
+                    ...user_data.my_posts.posts[post_index],
+                    ...update_data
+                };
+
+                // Update the user document
+                transaction.set(user_ref, user_data, { merge: true });
             });
-
-            // Update post count in general object
-            if (!user_data.general) {
-                user_data.general = { last_post_at: admin.firestore.Timestamp.now() };
-            }
-            user_data.general.post_count = (user_data.general.post_count || 0) + 1;
-            user_data.general.last_post_at = admin.firestore.Timestamp.now();
-
-            // Update the user document
-            transaction.set(user_ref, user_data, { merge: true });
-        });
+        }
 
         // Respond with success message
-        res.status(200).send({ status: "success", message: "Post created successfully", post_id });
+        res.status(200).send({ status: "success", message: "Post updated successfully" });
     } catch (error) {
-        console.error(`Error in v1_create_post function: ${error.message}`);
+        console.error(`Error in v1_update_post function: ${error.message}`);
         res.status(500).send({ status: "error", message: error.message });
     }
 });
