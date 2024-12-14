@@ -1,4 +1,3 @@
-// Firebase Cloud Function: v1_update_chat.js
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 const { VertexAI } = require('@google-cloud/vertexai');
@@ -17,7 +16,7 @@ const key_filename = path.join(__dirname, 'service-account.json');
 const vertex_ai = new VertexAI({ project: vertex_project, location: vertex_location, keyFilename: key_filename });
 
 // General initialization and checks for all functions
-async function initialize_and_check(req, res) {
+async function initializeAndCheck(req, res) {
     // Set CORS headers for preflight requests
     const allowed_origin = functions.config().cors.origin || '*';
     res.set('Access-Control-Allow-Origin', allowed_origin);
@@ -43,18 +42,31 @@ async function initialize_and_check(req, res) {
         return { proceed: false };
     }
 
-    const user_ref = admin.firestore().collection('users').doc(uid);
+    // Extract and verify Firebase Auth Token
+    const idToken = req.headers.authorization?.split('Bearer ')[1];
+    if (!idToken) {
+        res.status(401).send("Unauthorized: Missing Firebase Auth Token");
+        return { proceed: false };
+    }
+
+    let decodedToken;
+    try {
+        decodedToken = await admin.auth().verifyIdToken(idToken);
+    } catch (error) {
+        console.error(`Error verifying token: ${error.message}`);
+        res.status(403).send("Unauthorized: Invalid Firebase Auth Token");
+        return { proceed: false };
+    }
+
+    // Ensure the authenticated user's UID matches the request UID
+    if (decodedToken.uid !== uid) {
+        res.status(403).send("Unauthorized: UID mismatch");
+        return { proceed: false };
+    }
+
     const actions_ref = admin.firestore().collection('actions').doc(uid);
 
     try {
-        // Verify custom claims for the user
-        const user_record = await admin.auth().getUser(uid);
-        const custom_claims = user_record.customClaims;
-        if (!custom_claims || (custom_claims.user_type !== 'user' && custom_claims.user_type !== 'admin') || custom_claims.user_status !== 'active') {
-            res.status(403).send({ status: "error", message: "Unauthorized: User does not have the required permissions" });
-            return { proceed: false };
-        }
-
         // General action check before proceeding
         const actions_doc = await actions_ref.get();
         if (!actions_doc.exists) {
@@ -103,12 +115,12 @@ async function initialize_and_check(req, res) {
 }
 
 module.exports.v1_update_chat = functions.https.onRequest(async (req, res) => {
-    const init_result = await initialize_and_check(req, res);
-    if (!init_result.proceed) {
+    const initResult = await initializeAndCheck(req, res);
+    if (!initResult.proceed) {
         return;
     }
 
-    const { uid, instruction, chat_id, prompt } = init_result;
+    const { uid, instruction, chat_id, prompt } = initResult;
     const chats_ref = admin.firestore().collection('chats');
 
     try {
@@ -144,9 +156,9 @@ module.exports.v1_update_chat = functions.https.onRequest(async (req, res) => {
         const generative_model = vertex_ai.preview.getGenerativeModel({
             model: 'gemini-1.5-flash-002',
             generationConfig: {
-                maxOutputTokens: 8192,
-                temperature: 1,
-                topP: 0.95,
+                maxOutputTokens: 500,
+                temperature: 0.5,
+                topP: 0.90,
             },
             safetySettings: [
                 {

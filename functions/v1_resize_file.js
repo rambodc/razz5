@@ -4,8 +4,9 @@ const admin = require('firebase-admin');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const sharp = require('sharp');
 const ffmpeg = require('fluent-ffmpeg');
-const { loadImage, createCanvas } = require('canvas');
+const axios = require('axios'); 
 
 // Only initialize Firebase Admin if it hasn't been initialized
 if (!admin.apps.length) {
@@ -17,7 +18,7 @@ const { Storage } = require('@google-cloud/storage');
 const storage = new Storage({ projectId: functions.config().project_id });
 
 // General initialization and checks for all functions
-async function initialize_and_check(req, res) {
+async function initializeAndCheck(req, res) {
     // Set CORS headers for preflight requests
     const allowed_origin = functions.config().cors.origin || '*';
     res.set('Access-Control-Allow-Origin', allowed_origin);
@@ -43,19 +44,39 @@ async function initialize_and_check(req, res) {
         return { proceed: false };
     }
 
-    const user_ref = admin.firestore().collection('users').doc(uid);
-    const actions_ref = admin.firestore().collection('actions').doc(uid);
+    // Extract and verify Firebase Auth Token
+    const idToken = req.headers.authorization?.split('Bearer ')[1];
+    if (!idToken) {
+        res.status(401).send("Unauthorized: Missing Firebase Auth Token");
+        return { proceed: false };
+    }
+
+    let decodedToken;
+    try {
+        decodedToken = await admin.auth().verifyIdToken(idToken);
+    } catch (error) {
+        console.error(`Error verifying token: ${error.message}`);
+        res.status(403).send("Unauthorized: Invalid Firebase Auth Token");
+        return { proceed: false };
+    }
+
+    // Ensure the authenticated user's UID matches the request UID
+    if (decodedToken.uid !== uid) {
+        res.status(403).send("Unauthorized: UID mismatch");
+        return { proceed: false };
+    }
 
     try {
         // Verify custom claims for the user
         const user_record = await admin.auth().getUser(uid);
         const custom_claims = user_record.customClaims;
-        if (!custom_claims || (custom_claims.user_type !== 'user' && custom_claims.user_type !== 'admin') || custom_claims.user_status !== 'active') {
+        if (!custom_claims || custom_claims.user_status !== 'active') {
             res.status(403).send({ status: "error", message: "Unauthorized: User does not have the required permissions" });
             return { proceed: false };
         }
 
         // General action check before proceeding
+        const actions_ref = admin.firestore().collection('actions').doc(uid);
         const actions_doc = await actions_ref.get();
         if (!actions_doc.exists) {
             throw new Error('Actions document does not exist.');
@@ -103,12 +124,33 @@ async function initialize_and_check(req, res) {
 }
 
 module.exports.v1_resize_file = functions.https.onRequest(async (req, res) => {
-    const init_result = await initialize_and_check(req, res);
+    const init_result = await initializeAndCheck(req, res);
     if (!init_result.proceed) {
         return;
     }
 
     const { uid, post_id, file_format } = init_result;
+
+    // Add UID Check
+    const postRef = admin.firestore().collection('posts').doc(post_id);
+    const postDoc = await postRef.get();
+
+    if (!postDoc.exists) {
+        res.status(404).send({
+            status: "error",
+            message: "Post not found"
+        });
+        return;
+    }
+
+    const postData = postDoc.data();
+    if (postData.general?.uid !== uid) {
+        res.status(403).send({
+            status: "error",
+            message: "Unauthorized: UID mismatch with post owner"
+        });
+        return;
+    }
 
     const bucket_name = functions.config().storage.bucket;
     const bucket = storage.bucket(bucket_name);
@@ -142,6 +184,8 @@ module.exports.v1_resize_file = functions.https.onRequest(async (req, res) => {
         await file.download({ destination: temp_original_file_path });
         console.log("File downloaded successfully");
 
+
+
         // Retrieve metadata to determine file type
         const [fileMetadata] = await file.getMetadata();
         const fileType = fileMetadata.contentType.split('/')[0];
@@ -154,35 +198,25 @@ module.exports.v1_resize_file = functions.https.onRequest(async (req, res) => {
         if (fileType === 'image') {
             console.log("Resizing image to fit within 800x800 while maintaining aspect ratio");
 
-            // Resize image to fit within 800x800 while maintaining aspect ratio
-            const image = await loadImage(temp_original_file_path);
-            let width = image.width;
-            let height = image.height;
-            if (width > 800 || height > 800) {
-                if (width > height) {
-                    height *= 800 / width;
-                    width = 800;
-                } else {
-                    width *= 800 / height;
-                    height = 800;
-                }
-            }
+            const temp_resized_image_path = path.join(os.tmpdir(), `${post_id}_resized.png`);
 
-            const canvas = createCanvas(width, height);
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(image, 0, 0, width, height);
-
-            const resized_image_file_path = path.join(os.tmpdir(), `${post_id}_resized.png`);
-            const buffer = canvas.toBuffer('image/png');
-            fs.writeFileSync(resized_image_file_path, buffer);
+            // Use Sharp to auto-orient the image based on EXIF metadata and resize
+            await sharp(temp_original_file_path)
+                .rotate() // Automatically fixes orientation based on EXIF metadata
+                .resize({
+                    width: 800,
+                    height: 800,
+                    fit: 'inside', // Maintains aspect ratio
+                })
+                .toFile(temp_resized_image_path);
 
             console.log("Uploading resized image to Cloud Storage");
             const resized_image_storage_path = `posts/${post_id}/resized/${post_id}_resized.png`;
-            await bucket.upload(resized_image_file_path, {
+            await bucket.upload(temp_resized_image_path, {
                 destination: resized_image_storage_path,
                 metadata: {
-                    contentType: 'image/png'
-                }
+                    contentType: 'image/png',
+                },
             });
 
             console.log("Resized image uploaded successfully");
@@ -191,8 +225,11 @@ module.exports.v1_resize_file = functions.https.onRequest(async (req, res) => {
                 file_name: `${post_id}_resized.png`,
                 type: "image",
                 status: "success",
-                output_path: resized_image_storage_path
+                output_path: resized_image_storage_path,
             });
+
+            // Clean up temporary resized image file
+            fs.unlinkSync(temp_resized_image_path);
         } else if (fileType === 'video') {
             console.log("Resizing video file with adaptive scaling to maintain aspect ratio");
 
@@ -213,6 +250,9 @@ module.exports.v1_resize_file = functions.https.onRequest(async (req, res) => {
                     .run();
             });
 
+
+
+
             console.log("Uploading resized video to Cloud Storage");
             const resized_storage_path = `posts/${post_id}/resized/${post_id}_resized.mp4`;
             await bucket.upload(resized_file_path, {
@@ -230,6 +270,25 @@ module.exports.v1_resize_file = functions.https.onRequest(async (req, res) => {
                 status: "success",
                 output_path: resized_storage_path
             });
+
+            // Trigger v1_video_thumbnail function
+            console.log("Triggering v1_video_thumbnail function");
+            const axios = require('axios');
+            try {
+                const response = await axios.post('https://us-central1-razz5-14781.cloudfunctions.net/v1_video_thumbnail', {
+                    uid,
+                    post_id,
+                    file_format: 'video',
+                }, {
+                    headers: {
+                        Authorization: `Bearer ${req.headers.authorization.split('Bearer ')[1]}`
+                    }
+                });
+                console.log(`v1_video_thumbnail response: ${response.data}`);
+            } catch (error) {
+                console.error(`Error triggering v1_video_thumbnail: ${error.message}`);
+            }
+            
         } else if (fileType === 'audio') {
             console.log("Processing audio file to convert to mp3 format");
 
@@ -253,49 +312,94 @@ module.exports.v1_resize_file = functions.https.onRequest(async (req, res) => {
             });
 
             console.log("Audio file converted and uploaded successfully");
-            resized_paths.push(resized_audio_storage_path);
-            metadata.resized_files.push({
-                file_name: `${post_id}_audio.mp3`,
-                type: "audio",
-                status: "success",
-                output_path: resized_audio_storage_path
-            });
+
+            // Select a random audio thumbnail
+            const randomThumbnailIndex = Math.floor(Math.random() * 7) + 1; // Randomly select 1-7
+            const thumbnailFileName = `audio_thumb/audio_thumb${randomThumbnailIndex}.png`;
+
+            console.log(`Selected random thumbnail: ${thumbnailFileName}`);
+
+            // Define destination path for the thumbnail
+            const resized_thumbnail_storage_path = `posts/${post_id}/resized/${post_id}_resized.png`;
+
+            // Copy the selected thumbnail to the resized folder
+            await bucket.file(thumbnailFileName).copy(bucket.file(resized_thumbnail_storage_path));
+            console.log(`Thumbnail copied to: ${resized_thumbnail_storage_path}`);
+
+            resized_paths.push(resized_audio_storage_path, resized_thumbnail_storage_path);
+            metadata.resized_files.push(
+                {
+                    file_name: `${post_id}_audio.mp3`,
+                    type: "audio",
+                    status: "success",
+                    output_path: resized_audio_storage_path,
+                },
+                {
+                    file_name: `${post_id}_resized.png`, 
+                    type: "audio",
+                    status: "success",
+                    output_path: resized_thumbnail_storage_path,
+                }
+            );
         } else {
+
             console.log("Unsupported file type, creating a placeholder thumbnail");
 
-            const canvas = createCanvas(800, 800);
-            const ctx = canvas.getContext('2d');
-            ctx.fillStyle = '#a8a8a8';
-            ctx.fillRect(0, 0, 800, 800);
-            ctx.fillStyle = '#FFFFFF';
-            ctx.font = 'bold 80px Arial';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(file_format.toUpperCase(), 400, 400); // Add file format only
+            const placeholderPath = path.join(os.tmpdir(), `${post_id}_resized.png`);
 
-            const thumbnail_path = path.join(os.tmpdir(), `${post_id}_resized.png`);
-            const buffer = canvas.toBuffer('image/png');
-            fs.writeFileSync(thumbnail_path, buffer);
+            // Generate the placeholder image using Sharp
+            const width = 800;
+            const height = 800;
+            const backgroundColor = { r: 168, g: 168, b: 168, alpha: 1 }; // Gray background
+            const textColor = { r: 255, g: 255, b: 255, alpha: 1 }; // White text
 
+            // Create the placeholder with text
+            await sharp({
+                create: {
+                    width: width,
+                    height: height,
+                    channels: 4,
+                    background: backgroundColor, // Background color
+                },
+            })
+                .composite([
+                    {
+                        input: Buffer.from(
+                            `<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
+                                <rect width="100%" height="100%" fill="rgba(${backgroundColor.r},${backgroundColor.g},${backgroundColor.b},${backgroundColor.alpha})" />
+                                <text x="50%" y="50%" font-family="Arial, sans-serif" font-size="80" fill="rgba(${textColor.r},${textColor.g},${textColor.b},${textColor.alpha})" text-anchor="middle" dominant-baseline="middle">
+                                    ${file_format.toUpperCase()}
+                                </text>
+                            </svg>`
+                        ),
+                        top: 0,
+                        left: 0,
+                    },
+                ])
+                .png()
+                .toFile(placeholderPath);
+
+            console.log("Uploading placeholder thumbnail to Cloud Storage");
             const thumbnail_storage_path = `posts/${post_id}/resized/${post_id}_resized.png`;
-            await bucket.upload(thumbnail_path, {
+            await bucket.upload(placeholderPath, {
                 destination: thumbnail_storage_path,
                 metadata: {
-                    contentType: 'image/png'
-                }
+                    contentType: 'image/png',
+                },
             });
 
             metadata.resized_files.push({
                 file_name: `${post_id}_thumbnail.png`,
                 type: "thumbnail",
                 status: "success",
-                output_path: thumbnail_storage_path
+                output_path: thumbnail_storage_path,
             });
         }
 
         metadata.status = "completed";
         metadata.type = fileType === 'image' ? 'image' : fileType === 'video' ? 'video' : fileType === 'audio' ? 'audio' : 'thumbnail';
         metadata.last_attempt.result = "success";
+
 
         // Update Firestore document in the posts collection
         const postRef = admin.firestore().collection('posts').doc(post_id);

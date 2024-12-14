@@ -1,4 +1,3 @@
-// Firebase Cloud Function: v1_post_og_page.js
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 const { Storage } = require('@google-cloud/storage');
@@ -15,7 +14,7 @@ if (!admin.apps.length) {
 const storage = new Storage({ projectId: functions.config().project_id });
 
 // General initialization and checks for all functions
-async function initialize_and_check(req, res) {
+async function initializeAndCheck(req, res) {
     // Set CORS headers for preflight requests
     const allowed_origin = functions.config().cors.origin || '*';
     res.set('Access-Control-Allow-Origin', allowed_origin);
@@ -38,6 +37,28 @@ async function initialize_and_check(req, res) {
 
     if (!uid || !post_id || !title || !description || !image || !og_url || !redirect_url || refresh === undefined) {
         res.status(400).send("Missing required parameters");
+        return { proceed: false };
+    }
+
+    // Extract and verify Firebase Auth Token
+    const idToken = req.headers.authorization?.split('Bearer ')[1];
+    if (!idToken) {
+        res.status(401).send("Unauthorized: Missing Firebase Auth Token");
+        return { proceed: false };
+    }
+
+    let decodedToken;
+    try {
+        decodedToken = await admin.auth().verifyIdToken(idToken);
+    } catch (error) {
+        console.error(`Error verifying token: ${error.message}`);
+        res.status(403).send("Unauthorized: Invalid Firebase Auth Token");
+        return { proceed: false };
+    }
+
+    // Ensure the authenticated user's UID matches the request UID
+    if (decodedToken.uid !== uid) {
+        res.status(403).send("Unauthorized: UID mismatch");
         return { proceed: false };
     }
 
@@ -92,12 +113,12 @@ async function initialize_and_check(req, res) {
 }
 
 module.exports.v1_post_og_page = functions.https.onRequest(async (req, res) => {
-    const init_result = await initialize_and_check(req, res);
-    if (!init_result.proceed) {
+    const initResult = await initializeAndCheck(req, res);
+    if (!initResult.proceed) {
         return;
     }
 
-    const { post_id, title, description, image, og_url, redirect_url, refresh } = init_result;
+    const { post_id, title, description, image, og_url, redirect_url, refresh } = initResult;
     const post_doc_ref = admin.firestore().collection('posts').doc(post_id);
 
     try {

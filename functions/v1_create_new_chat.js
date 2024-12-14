@@ -1,4 +1,3 @@
-// Firebase Cloud Function: v1_create_new_chat.js
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 
@@ -27,25 +26,38 @@ async function initializeAndCheck(req, res) {
     }
 
     // Extract necessary parameters from the request body
-    const { uid, type, version, status } = req.body;
+    const { uid, type, version, status, post_id } = req.body;
 
-    if (!uid || !type || !version || !status) {
-        res.status(400).send("Missing required parameters: uid, type, version, or status");
+    if (!uid || !type || !version || !status || !post_id) {
+        res.status(400).send("Missing required parameters: uid, type, version, status, or post_id");
         return { proceed: false };
     }
 
-    const user_ref = admin.firestore().collection('users').doc(uid);
+    // Extract and verify Firebase Auth Token
+    const idToken = req.headers.authorization?.split('Bearer ')[1];
+    if (!idToken) {
+        res.status(401).send("Unauthorized: Missing Firebase Auth Token");
+        return { proceed: false };
+    }
+
+    let decodedToken;
+    try {
+        decodedToken = await admin.auth().verifyIdToken(idToken);
+    } catch (error) {
+        console.error(`Error verifying token: ${error.message}`);
+        res.status(403).send("Unauthorized: Invalid Firebase Auth Token");
+        return { proceed: false };
+    }
+
+    // Ensure the authenticated user's UID matches the request UID
+    if (decodedToken.uid !== uid) {
+        res.status(403).send("Unauthorized: UID mismatch");
+        return { proceed: false };
+    }
+
     const actions_ref = admin.firestore().collection('actions').doc(uid);
 
     try {
-        // Verify custom claims for the user
-        const user_record = await admin.auth().getUser(uid);
-        const custom_claims = user_record.customClaims;
-        if (!custom_claims || (custom_claims.user_type !== 'user' && custom_claims.user_type !== 'admin') || custom_claims.user_status !== 'active') {
-            res.status(403).send({ status: "error", message: "Unauthorized: User does not have the required permissions" });
-            return { proceed: false };
-        }
-
         // General action check before proceeding
         const actions_doc = await actions_ref.get();
         if (!actions_doc.exists) {
@@ -85,7 +97,7 @@ async function initializeAndCheck(req, res) {
             "general.total_actions_today": total_actions_today
         });
 
-        return { proceed: true, uid, type, version, status };
+        return { proceed: true, uid, type, version, status, post_id };
     } catch (error) {
         console.error(`Error during initialization and checks: ${error.message}`);
         res.status(500).send({ status: "error", message: error.message });
@@ -99,19 +111,22 @@ module.exports.v1_create_new_chat = functions.https.onRequest(async (req, res) =
         return;
     }
 
-    const { uid, type, version, status } = initResult;
+    const { uid, type, version, status, post_id } = initResult;
     const chats_ref = admin.firestore().collection('chats');
 
     try {
         // Create a new chat document
         const chat_doc_ref = chats_ref.doc();
         const chat_data = {
-            chat_id: chat_doc_ref.id,
-            uid,
-            type,
-            version,
-            status,
-            created_at: admin.firestore.FieldValue.serverTimestamp()
+            general: {
+                chat_id: chat_doc_ref.id,
+                uid,
+                type,
+                version,
+                status,
+                post_id,
+                created_at: admin.firestore.FieldValue.serverTimestamp()
+            }
         };
 
         await chat_doc_ref.set(chat_data);

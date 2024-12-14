@@ -1,4 +1,3 @@
-// Firebase Cloud Function: v1_pinata_upload.js
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 const axios = require('axios');
@@ -19,7 +18,7 @@ const storage = new Storage({ projectId: functions.config().project_id });
 const pinata_jwt = functions.config().pinata.jwt; // Access the environment variable
 
 // General initialization and checks for all functions
-async function initialize_and_check(req, res) {
+async function initializeAndCheck(req, res) {
     // Set CORS headers for preflight requests
     const allowed_origin = functions.config().cors.origin || '*';
     res.set('Access-Control-Allow-Origin', allowed_origin);
@@ -27,7 +26,6 @@ async function initialize_and_check(req, res) {
     res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
     if (req.method === "OPTIONS") {
-        // Handle preflight request
         res.status(204).send('');
         return { proceed: false };
     }
@@ -42,6 +40,28 @@ async function initialize_and_check(req, res) {
 
     if (!uid || !file_path) {
         res.status(400).send("Missing required parameters: uid or file_path");
+        return { proceed: false };
+    }
+
+    // Extract and verify Firebase Auth Token
+    const idToken = req.headers.authorization?.split('Bearer ')[1];
+    if (!idToken) {
+        res.status(401).send("Unauthorized: Missing Firebase Auth Token");
+        return { proceed: false };
+    }
+
+    let decodedToken;
+    try {
+        decodedToken = await admin.auth().verifyIdToken(idToken);
+    } catch (error) {
+        console.error(`Error verifying token: ${error.message}`);
+        res.status(403).send("Unauthorized: Invalid Firebase Auth Token");
+        return { proceed: false };
+    }
+
+    // Ensure the authenticated user's UID matches the request UID
+    if (decodedToken.uid !== uid) {
+        res.status(403).send("Unauthorized: UID mismatch");
         return { proceed: false };
     }
 
@@ -105,12 +125,12 @@ async function initialize_and_check(req, res) {
 }
 
 module.exports.v1_pinata_upload = functions.https.onRequest(async (req, res) => {
-    const init_result = await initialize_and_check(req, res);
-    if (!init_result.proceed) {
+    const initResult = await initializeAndCheck(req, res);
+    if (!initResult.proceed) {
         return;
     }
 
-    const { uid, file_path } = init_result;
+    const { uid, file_path } = initResult;
 
     try {
         console.log("Downloading file from Cloud Storage");

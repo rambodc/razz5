@@ -37,6 +37,12 @@ exports.v1_resize_file = require('./v1_resize_file').v1_resize_file;
 
 exports.v1_update_post = require('./v1_update_post').v1_update_post;
 
+exports.v1_video_thumbnail = require('./v1_video_thumbnail').v1_video_thumbnail;
+
+exports.v1_media_ai = require('./v1_media_ai').v1_media_ai;
+
+
+
 
 
 // Central functionHandler
