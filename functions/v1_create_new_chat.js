@@ -26,10 +26,10 @@ async function initializeAndCheck(req, res) {
     }
 
     // Extract necessary parameters from the request body
-    const { uid, type, version, status, post_id } = req.body;
+    const { uid, type, version, status, post_id, chat_id } = req.body;
 
-    if (!uid || !type || !version || !status || !post_id) {
-        res.status(400).send("Missing required parameters: uid, type, version, status, or post_id");
+    if (!uid || !type || !version || !status || !post_id || !chat_id) {
+        res.status(400).send("Missing required parameters: uid, type, version, status, post_id, or chat_id");
         return { proceed: false };
     }
 
@@ -97,7 +97,7 @@ async function initializeAndCheck(req, res) {
             "general.total_actions_today": total_actions_today
         });
 
-        return { proceed: true, uid, type, version, status, post_id };
+        return { proceed: true, uid, type, version, status, post_id, chat_id };
     } catch (error) {
         console.error(`Error during initialization and checks: ${error.message}`);
         res.status(500).send({ status: "error", message: error.message });
@@ -111,15 +111,15 @@ module.exports.v1_create_new_chat = functions.https.onRequest(async (req, res) =
         return;
     }
 
-    const { uid, type, version, status, post_id } = initResult;
+    const { uid, type, version, status, post_id, chat_id } = initResult;
     const chats_ref = admin.firestore().collection('chats');
 
     try {
-        // Create a new chat document
-        const chat_doc_ref = chats_ref.doc();
+        // Use the provided chat_id to create the document
+        const chat_doc_ref = chats_ref.doc(chat_id);
         const chat_data = {
             general: {
-                chat_id: chat_doc_ref.id,
+                chat_id,
                 uid,
                 type,
                 version,
@@ -132,7 +132,7 @@ module.exports.v1_create_new_chat = functions.https.onRequest(async (req, res) =
         await chat_doc_ref.set(chat_data);
 
         // Respond with success status and chat_id
-        return res.status(200).send({ status: "success", chat_id: chat_doc_ref.id });
+        return res.status(200).send({ status: "success", chat_id });
     } catch (error) {
         console.error('Error occurred:', error);
         return res.status(500).send({ status: "error", message: error.message });

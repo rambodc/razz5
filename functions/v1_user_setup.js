@@ -28,9 +28,9 @@ module.exports.v1_user_setup = functions.https.onRequest(async (req, res) => {
     }
 
     // Extract necessary parameters from the request body
-    const { uid, first_name, last_name, email, user_type, user_status, last_reset_time, daily_raz, total_raz } = req.body;
+    const { uid, first_name, last_name, email, user_type, user_status, last_reset_time, daily_raz, total_raz, utc_offset, email_verified, last_op, bio } = req.body;
 
-    if (!uid || !email || !user_type || !user_status || last_reset_time === undefined || daily_raz === undefined || total_raz === undefined) {
+    if (!uid || !email || !user_type || !user_status || last_reset_time === undefined || daily_raz === undefined || total_raz === undefined || !bio) {
         return res.status(400).send("Missing required parameters");
     }
 
@@ -79,7 +79,11 @@ module.exports.v1_user_setup = functions.https.onRequest(async (req, res) => {
                     daily_raz: Number(daily_raz), // Ensure daily_raz is a number
                     created_at: admin.firestore.FieldValue.serverTimestamp(),
                     key: "string",
-                    total_raz: Number(total_raz) // Add total_raz from input
+                    total_raz: Number(total_raz), // Add total_raz from input
+                    utc_offset,
+                    email_verified,
+                    last_op,
+                    bio
                 }
             }, { merge: true });
 
@@ -128,7 +132,8 @@ module.exports.v1_user_setup = functions.https.onRequest(async (req, res) => {
             email,
             username,
             user_type,
-            user_status
+            user_status,
+            bio
         };
         const user_profile_json_path = `users/${uid}/profile/${uid}_profile.json`;
         const user_profile_file = bucket.file(user_profile_json_path);

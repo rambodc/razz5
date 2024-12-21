@@ -14,18 +14,22 @@ async function initializeAndCheck(req, res) {
     res.set('Access-Control-Allow-Methods', 'GET, POST');
     res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
+    // Handle preflight requests
     if (req.method === "OPTIONS") {
         res.status(204).send('');
         return { proceed: false };
     }
 
+    // Ensure the request method is POST
     if (req.method !== "POST") {
         res.status(405).send("Method Not Allowed");
         return { proceed: false };
     }
 
+    // Extract UID from request body
     const { uid } = req.body;
 
+    // Ensure UID is present
     if (!uid) {
         res.status(400).send("Missing required parameter: uid");
         return { proceed: false };
@@ -40,6 +44,7 @@ async function initializeAndCheck(req, res) {
 
     let decodedToken;
     try {
+        // Verify the token with Firebase Admin SDK
         decodedToken = await admin.auth().verifyIdToken(idToken);
     } catch (error) {
         console.error(`Error verifying token: ${error.message}`);
@@ -54,7 +59,7 @@ async function initializeAndCheck(req, res) {
     }
 
     try {
-        // Verify custom claims for the user
+        // Retrieve user record and verify custom claims
         const user_record = await admin.auth().getUser(uid);
         const custom_claims = user_record.customClaims;
         if (!custom_claims || custom_claims.user_status !== 'active') {
@@ -62,7 +67,7 @@ async function initializeAndCheck(req, res) {
             return { proceed: false };
         }
 
-        // General action check before proceeding
+        // Check actions document for user limits
         const actions_ref = admin.firestore().collection('actions').doc(uid);
         const actions_doc = await actions_ref.get();
         if (!actions_doc.exists) {
@@ -110,89 +115,78 @@ async function initializeAndCheck(req, res) {
     }
 }
 
-module.exports.v1_update_post = functions.https.onRequest(async (req, res) => {
+module.exports.v1_update_user = functions.https.onRequest(async (req, res) => {
     const initResult = await initializeAndCheck(req, res);
     if (!initResult.proceed) {
         return;
     }
 
     const { uid } = initResult;
-    const { object_name, update_user, post_id, ...update_data } = req.body;
+    const { update_json, object_name, ...update_data } = req.body;
 
-    if (!post_id) {
-        res.status(400).send("Missing required parameter: post_id");
-        return;
-    }
-
+    // Validate required parameters
     if (!object_name) {
         res.status(400).send("Missing required parameter: object_name");
         return;
     }
 
     try {
-        // Add UID Check
-        const postRef = admin.firestore().collection('posts').doc(post_id);
-        const postDoc = await postRef.get();
+        // Reference to Firestore user document
+        const userRef = admin.firestore().collection('users').doc(uid);
+        const userDoc = await userRef.get();
 
-        if (!postDoc.exists) {
+        // Check if user document exists
+        if (!userDoc.exists) {
             res.status(404).send({
                 status: "error",
-                message: "Post not found"
+                message: "User not found"
             });
             return;
         }
 
-        const postData = postDoc.data();
-        if (postData.general?.uid !== uid) {
-            res.status(403).send({
-                status: "error",
-                message: "Unauthorized: UID mismatch with post owner"
-            });
-            return;
-        }
-
-        // Update the specific object in the posts collection
-        await postRef.set({
+        // Update the specified object in Firestore
+        await userRef.set({
             [object_name]: {
+                ...userDoc.data()[object_name],
                 ...update_data
             }
         }, { merge: true });
 
-        if (update_user) {
-            // Start a transaction to update user's post data
-            const userRef = admin.firestore().collection('users').doc(uid);
-            await admin.firestore().runTransaction(async (transaction) => {
-                const userDoc = await transaction.get(userRef);
-                if (!userDoc.exists) {
-                    throw new Error('User document does not exist.');
+        if (update_json) {
+            // Update the JSON profile in Cloud Storage
+            const bucket = admin.storage().bucket();
+            const userProfilePath = `users/${uid}/profile/${uid}_profile.json`;
+            const userProfileFile = bucket.file(userProfilePath);
+
+            let existingProfile = {};
+            try {
+                // Check if JSON file exists and read it
+                const [fileExists] = await userProfileFile.exists();
+                if (fileExists) {
+                    const [fileContent] = await userProfileFile.download();
+                    existingProfile = JSON.parse(fileContent.toString());
                 }
+            } catch (error) {
+                console.error(`Error reading existing profile JSON: ${error.message}`);
+            }
 
-                let userData = userDoc.data();
-                if (!userData.my_posts || !userData.my_posts.posts) {
-                    throw new Error('User posts data does not exist.');
+            // Merge updates into the existing JSON profile
+            const updatedProfile = {
+                ...existingProfile,
+                ...update_data
+            };
+
+            // Save updated JSON back to Cloud Storage
+            await userProfileFile.save(JSON.stringify(updatedProfile, null, 2), {
+                metadata: {
+                    contentType: 'application/json'
                 }
-
-                // Find the specific post in user's my_posts array and update it
-                const postIndex = userData.my_posts.posts.findIndex(post => post.post_id === post_id);
-                if (postIndex === -1) {
-                    throw new Error('Post not found in user data.');
-                }
-
-                // Update the post fields at the first level (not inside an object like "general")
-                userData.my_posts.posts[postIndex] = {
-                    ...userData.my_posts.posts[postIndex],
-                    ...update_data
-                };
-
-                // Update the user document
-                transaction.set(userRef, userData, { merge: true });
             });
         }
 
-        // Respond with success message
-        res.status(200).send({ status: "success", message: "Post updated successfully" });
+        res.status(200).send({ status: "success", message: "User updated successfully" });
     } catch (error) {
-        console.error(`Error in v1_update_post function: ${error.message}`);
+        console.error(`Error in v1_update_user function: ${error.message}`);
         res.status(500).send({ status: "error", message: error.message });
     }
 });

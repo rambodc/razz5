@@ -214,9 +214,9 @@ module.exports.v1_media_ai = functions.https.onRequest(async (req, res) => {
         const generativeModel = vertex_ai.preview.getGenerativeModel({
             model: 'gemini-1.5-flash-002',
             generationConfig: {
-                maxOutputTokens: 8192,
-                temperature: 1,
-                topP: 0.95,
+                maxOutputTokens: 500,
+                temperature: 0.3,
+                topP: 0.8,
             },
             safetySettings: [
                 { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'OFF' },
@@ -237,14 +237,22 @@ module.exports.v1_media_ai = functions.https.onRequest(async (req, res) => {
 
         // Extract title, description, and art_category
         let title = null, description = null, art_category = null;
+
         try {
+            // Parse the response and ensure it contains the `response` object
             const responseJson = JSON.parse(fullResponse.candidates[0].content.parts[0].text.match(/```json\n({.*})\n```/s)[1]);
-            title = responseJson.title || null;
-            description = responseJson.description || null;
-            art_category = responseJson.art_category || null;
+        
+            if (responseJson.response) {
+                title = responseJson.response.title || null;
+                description = responseJson.response.description || null;
+                art_category = responseJson.response.art_category || null;
+            } else {
+                console.error("Response object missing in AI response");
+            }
         } catch (error) {
             console.error("Error parsing AI response: ", error.message);
         }
+        
 
         // Update Firestore with extracted and full response
         await postRef.update({
@@ -268,6 +276,33 @@ module.exports.v1_media_ai = functions.https.onRequest(async (req, res) => {
                 description: description || admin.firestore.FieldValue.delete()
             }
         }, { merge: true });
+
+        // Update the user's document
+        const userRef = admin.firestore().collection('users').doc(uid);
+        const userDoc = await userRef.get();
+
+        if (!userDoc.exists) {
+            throw new Error(`User document not found for UID: ${uid}`);
+        }
+
+        const userData = userDoc.data();
+
+        // Update the relevant post in the my_posts.posts array
+        const updatedPosts = userData.my_posts.posts.map(post => {
+            if (post.post_id === post_id) {
+                return {
+                    ...post,
+                    title: title || post.title,
+                    description: description || post.description
+                };
+            }
+            return post;
+        });
+
+        // Write the updated array back to Firestore
+        await userRef.update({
+            "my_posts.posts": updatedPosts
+        });
 
         res.status(200).send({
             status: "success",

@@ -1,6 +1,7 @@
 ## Patch Variables:
 
 * __authEmail__ ```String```
+* __bio__ ```String```
 * __email__ ```String```
 * __emailVerified__ ```String```
 * __environment__ ```Number```

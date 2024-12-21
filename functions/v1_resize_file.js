@@ -1,3 +1,4 @@
+
 // Firebase Cloud Function: v1_resize_file.js (Updated Version with Requested Changes)
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
@@ -169,6 +170,9 @@ module.exports.v1_resize_file = functions.https.onRequest(async (req, res) => {
             result: null
         }
     };
+
+    // Write in-progress status to Firestore early
+    await postRef.set({ resized: metadata }, { merge: true });
 
     try {
         console.log("Reconstructing file path from Cloud Storage");
@@ -399,13 +403,47 @@ module.exports.v1_resize_file = functions.https.onRequest(async (req, res) => {
         metadata.status = "completed";
         metadata.type = fileType === 'image' ? 'image' : fileType === 'video' ? 'video' : fileType === 'audio' ? 'audio' : 'thumbnail';
         metadata.last_attempt.result = "success";
-
-
+        
         // Update Firestore document in the posts collection
-        const postRef = admin.firestore().collection('posts').doc(post_id);
-        await postRef.set({ resized: metadata }, { merge: true });
-
-        res.status(200).send({ status: "success", message: "File processed and uploaded successfully", resized_paths });
+        await postRef.set({ 
+            general: { ...postData.general, type: metadata.type }, 
+            resized: metadata 
+        }, { merge: true });        
+        
+        // Update the users document and my_posts array
+        const userRef = admin.firestore().collection('users').doc(uid);
+        const userDoc = await userRef.get();
+        
+        if (!userDoc.exists) {
+            console.error(`User document not found for UID: ${uid}`);
+        } else {
+            const userData = userDoc.data();
+        
+            // Find and update the specific post in the my_posts array
+            const updatedPosts = userData.my_posts.posts.map((post) => {
+                if (post.post_id === post_id) {
+                    post.type = metadata.type; // Update the type field
+                    post.status = metadata.status; // Update status to "completed"
+                }
+                return post;
+            });
+        
+            // Update the users document with the modified posts array
+            await userRef.update({
+                "my_posts.posts": updatedPosts,
+                "general.last_post_at": admin.firestore.Timestamp.now() // Optional: Update general field
+            });
+        
+            console.log("User document updated successfully");
+        }
+        
+        res.status(200).send({ 
+            status: "success", 
+            message: "File processed and uploaded successfully", 
+            resized_paths,
+            type: metadata.type,
+            post_id: post_id
+        });
     } catch (error) {
         console.error(`Error in v1_resize_file function: ${error.message}`);
 

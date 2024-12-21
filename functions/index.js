@@ -41,6 +41,10 @@ exports.v1_video_thumbnail = require('./v1_video_thumbnail').v1_video_thumbnail;
 
 exports.v1_media_ai = require('./v1_media_ai').v1_media_ai;
 
+exports.v1_delete_post = require('./v1_delete_post').v1_delete_post;
+
+exports.v1_update_user = require('./v1_update_user').v1_update_user;
+
 
 
 
