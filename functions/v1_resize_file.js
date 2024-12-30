@@ -405,20 +405,20 @@ module.exports.v1_resize_file = functions.https.onRequest(async (req, res) => {
         metadata.last_attempt.result = "success";
         
         // Update Firestore document in the posts collection
-        await postRef.set({ 
-            general: { ...postData.general, type: metadata.type }, 
-            resized: metadata 
-        }, { merge: true });        
-        
+        await postRef.set({
+            general: { ...postData.general, type: metadata.type, status: metadata.status }, // Update general status and type
+            resized: metadata,
+        }, { merge: true });
+
         // Update the users document and my_posts array
         const userRef = admin.firestore().collection('users').doc(uid);
         const userDoc = await userRef.get();
-        
+
         if (!userDoc.exists) {
             console.error(`User document not found for UID: ${uid}`);
         } else {
             const userData = userDoc.data();
-        
+
             // Find and update the specific post in the my_posts array
             const updatedPosts = userData.my_posts.posts.map((post) => {
                 if (post.post_id === post_id) {
@@ -427,13 +427,13 @@ module.exports.v1_resize_file = functions.https.onRequest(async (req, res) => {
                 }
                 return post;
             });
-        
+
             // Update the users document with the modified posts array
             await userRef.update({
                 "my_posts.posts": updatedPosts,
-                "general.last_post_at": admin.firestore.Timestamp.now() // Optional: Update general field
+                "general.last_post_at": admin.firestore.Timestamp.now(), // Optional: Update general field
             });
-        
+
             console.log("User document updated successfully");
         }
         

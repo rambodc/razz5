@@ -1,3 +1,4 @@
+// Firebase Cloud Function: v1_create_revision_1.js
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 const axios = require('axios');
@@ -36,10 +37,10 @@ async function initializeAndCheck(req, res) {
     }
 
     // Extract necessary parameters from the request body
-    const { uid, file_path, post_id } = req.body;
+    const { uid, post_id, revisions } = req.body;
 
-    if (!uid || !file_path || !post_id) {
-        res.status(400).send("Missing required parameters: uid, file_path, or post_id");
+    if (!uid || !post_id || !revisions) {
+        res.status(400).send("Missing required parameters: uid, post_id, or revisions");
         return { proceed: false };
     }
 
@@ -65,19 +66,17 @@ async function initializeAndCheck(req, res) {
         return { proceed: false };
     }
 
-    const user_ref = admin.firestore().collection('users').doc(uid);
-    const actions_ref = admin.firestore().collection('actions').doc(uid);
-
     try {
         // Verify custom claims for the user
         const user_record = await admin.auth().getUser(uid);
         const custom_claims = user_record.customClaims;
-        if (!custom_claims || (custom_claims.user_type !== 'user' && custom_claims.user_type !== 'admin') || custom_claims.user_status !== 'active') {
+        if (!custom_claims || custom_claims.user_status !== 'active') {
             res.status(403).send({ status: "error", message: "Unauthorized: User does not have the required permissions" });
             return { proceed: false };
         }
 
         // General action check before proceeding
+        const actions_ref = admin.firestore().collection('actions').doc(uid);
         const actions_doc = await actions_ref.get();
         if (!actions_doc.exists) {
             throw new Error('Actions document does not exist.');
@@ -116,7 +115,7 @@ async function initializeAndCheck(req, res) {
             "general.total_actions_today": total_actions_today
         });
 
-        return { proceed: true, uid, file_path, post_id };
+        return { proceed: true, uid, post_id, revisions };
     } catch (error) {
         console.error(`Error during initialization and checks: ${error.message}`);
         res.status(500).send({ status: "error", message: error.message });
@@ -124,88 +123,121 @@ async function initializeAndCheck(req, res) {
     }
 }
 
-module.exports.v1_pinata_upload = functions.https.onRequest(async (req, res) => {
-    const initResult = await initializeAndCheck(req, res);
-    if (!initResult.proceed) {
+module.exports.v1_create_revision_1 = functions.https.onRequest(async (req, res) => {
+    // Perform general initialization and checks
+    const init_result = await initializeAndCheck(req, res);
+    if (!init_result.proceed) {
         return;
     }
 
-    const { uid, file_path, post_id } = initResult;
+    // Extract validated parameters
+    const { uid, post_id, revisions } = init_result;
+
+    // Reference the Firestore document for the specified post
+    const postRef = admin.firestore().collection('posts').doc(post_id);
+    const postDoc = await postRef.get();
+
+    // Ensure the post exists in Firestore
+    if (!postDoc.exists) {
+        res.status(404).send({
+            status: "error",
+            message: "Post not found"
+        });
+        return;
+    }
+
+    // Verify ownership of the post by matching UID
+    const postData = postDoc.data();
+    if (postData.general?.uid !== uid) {
+        res.status(403).send({
+            status: "error",
+            message: "Unauthorized: UID mismatch with post owner"
+        });
+        return;
+    }
+
+    // Initialize Cloud Storage paths for the revision file
+    const bucket_name = functions.config().storage.bucket;
+    const bucket = storage.bucket(bucket_name);
+    const revisionPath = `posts/${post_id}/revisions/revision1.json`;
+    const tempRevisionPath = path.join(os.tmpdir(), 'revision1.json');
 
     try {
-        // Post-specific check for ownership
-        const postRef = admin.firestore().collection('posts').doc(post_id);
-        const postDoc = await postRef.get();
-
-        if (!postDoc.exists) {
-            res.status(404).send({
-                status: "error",
-                message: "Post not found"
-            });
-            return;
+        // Check if the revision file already exists in Cloud Storage
+        const [exists] = await bucket.file(revisionPath).exists();
+        if (exists) {
+            throw new Error('Revision 1 already exists. Cannot overwrite.');
         }
 
-        const postData = postDoc.data();
-        if (postData.general?.uid !== uid) {
-            res.status(403).send({
-                status: "error",
-                message: "Unauthorized: UID mismatch with post owner"
-            });
-            return;
-        }
+        // Write the revisions object to a temporary file
+        fs.writeFileSync(tempRevisionPath, JSON.stringify(revisions));
 
-        console.log("Downloading file from Cloud Storage");
-        const bucket_name = functions.config().storage.bucket;
-        const bucket = storage.bucket(bucket_name);
-        const file = bucket.file(file_path);
-        const temp_file_path = path.join(os.tmpdir(), path.basename(file_path));
+        // Upload the temporary JSON file to Cloud Storage
+        await bucket.upload(tempRevisionPath, {
+            destination: revisionPath,
+            metadata: {
+                contentType: 'application/json',
+            },
+        });
 
-        await file.download({ destination: temp_file_path });
-
-        console.log("Uploading file to IPFS via Pinata");
+        // Upload the revision file to IPFS via Pinata
+        console.log("Uploading revision file to IPFS via Pinata");
         const form_data = new FormData();
-        form_data.append('file', fs.createReadStream(temp_file_path));
+        form_data.append('file', fs.createReadStream(tempRevisionPath));
 
         const pinata_metadata = JSON.stringify({
-            name: path.basename(file_path),
+            name: `revision1_${post_id}`,
             keyvalues: {
-                post_id: post_id
-            }
+                post_id: post_id,
+            },
         });
         form_data.append('pinataMetadata', pinata_metadata);
 
         const pinata_options = JSON.stringify({
-            cidVersion: 0
+            cidVersion: 0,
         });
         form_data.append('pinataOptions', pinata_options);
 
-        const response = await axios.post("https://api.pinata.cloud/pinning/pinFileToIPFS", form_data, {
+        const pinataResponse = await axios.post("https://api.pinata.cloud/pinning/pinFileToIPFS", form_data, {
             maxBodyLength: "Infinity",
             headers: {
                 'Content-Type': `multipart/form-data; boundary=${form_data._boundary}`,
-                'Authorization': `Bearer ${pinata_jwt}`
-            }
+                'Authorization': `Bearer ${pinata_jwt}`,
+            },
         });
 
-        const ipfs_hash = response.data.IpfsHash;
-        const gateway_url = `https://gateway.pinata.cloud/ipfs/${ipfs_hash}`;
+        const ipfs_hash = pinataResponse.data.IpfsHash;
+        console.log("Revision file uploaded to IPFS successfully", ipfs_hash);
 
-        console.log("File uploaded to IPFS successfully");
+        // Update Firestore with the IPFS hash and revision number
+        if (postData.general?.revision_number !== undefined) {
+            throw new Error('Revision number already exists. Cannot create revision 1.');
+        }
 
-        // Update the Firestore document with the IPFS hash
-        await postRef.update({
-            "general.content_ipfs_hash": ipfs_hash
-        });
+        await postRef.set({
+            general: {
+                ...postData.general,
+                revision_number: 1,
+                latest_revision_ipfs_hash: ipfs_hash,
+            },
+        }, { merge: true });
 
-        // Respond with success message
-        return res.status(200).send({
+        // Respond with success
+        res.status(200).send({
             status: "success",
-            message: "File uploaded to IPFS successfully",
-            hash: ipfs_hash,
-            url: gateway_url
+            message: "Revision 1 created successfully",
+            revisionPath,
+            ipfs_hash,
         });
+
+        // Clean up the temporary file
+        fs.unlinkSync(tempRevisionPath);
     } catch (error) {
-        console.error(`Error in v1_pinata_upload function: ${error.message}`);
-        return res.status(500).send({ status: "error", message: error.message });
+        // Handle errors and update Firestore if necessary
+        console.error(`Error in v1_create_revision_1 function: ${error.message}`);
+        res.status(500).send({
+            status: "error",
+            message: error.message,
+        });
     }
 });

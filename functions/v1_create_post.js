@@ -180,3 +180,4 @@ module.exports.v1_create_post = functions.https.onRequest(async (req, res) => {
         res.status(500).send({ status: "error", message: error.message });
     }
 });
+
