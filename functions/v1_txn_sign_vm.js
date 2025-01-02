@@ -106,9 +106,15 @@ module.exports.v1_txn_sign_vm = functions.https.onRequest(async (req, res) => {
     for (const txn of transactionsToProcess) {
         try {
             console.log(`Processing ${txn.txnKey}...`);
-            const result = await axios.post('http://34.122.67.187:8080/sign-transaction', {
-                transaction: txn.txnData,
-            });
+            const result = await axios.post(
+                'http://34.122.67.187:8080/sign-transaction',
+                {
+                    transaction: txn.txnData,
+                },
+                {
+                    timeout: 10000, // Timeout in milliseconds (10 seconds)
+                }
+            );
 
             const statusField = `${txn.txnKey}_status`;
             const status = result.data.success ? 'success' : 'failed';
