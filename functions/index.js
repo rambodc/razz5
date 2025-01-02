@@ -1,42 +1,10 @@
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
-const { VertexAI } = require('@google-cloud/vertexai');
-
 admin.initializeApp();
 
-// Load environment variables
 const vertexProject = functions.config().vertex.project;
 const vertexLocation = functions.config().vertex.location;
 const bucketName = functions.config().bucket.name;
-
-// Initialize Vertex AI with the environment-specific project and location
-const vertexAI = new VertexAI({ project: vertexProject, location: vertexLocation });
-const generativeModel = vertexAI.preview.getGenerativeModel({
-    model: 'gemini-1.5-flash-001',
-    generationConfig: {
-        'maxOutputTokens': 8192,
-        'temperature': 1,
-        'topP': 0.95,
-    },
-    safetySettings: [
-        {
-            'category': 'HARM_CATEGORY_HATE_SPEECH',
-            'threshold': 'BLOCK_MEDIUM_AND_ABOVE'
-        },
-        {
-            'category': 'HARM_CATEGORY_DANGEROUS_CONTENT',
-            'threshold': 'BLOCK_MEDIUM_AND_ABOVE'
-        },
-        {
-            'category': 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
-            'threshold': 'BLOCK_MEDIUM_AND_ABOVE'
-        },
-        {
-            'category': 'HARM_CATEGORY_HARASSMENT',
-            'threshold': 'BLOCK_MEDIUM_AND_ABOVE'
-        }
-    ],
-});
 
 // Central functionHandler
 exports.functionHandler = functions.firestore
@@ -46,34 +14,48 @@ exports.functionHandler = functions.firestore
         const functionName = data.functionName;
         const parameters = data.parameters;
         const documentId = context.params.documentId;
+        const userStatus = data.userStatus;
 
         try {
+            // Check if userStatus is "active"
+            if (userStatus !== "active") {
+                throw new Error(`User status is ${userStatus}. Only active users can trigger functions.`);
+            }
+
             const func = require(`./${functionName}`);
 
             if (func && typeof func === 'function') {
-                await func(documentId, parameters, generativeModel, bucketName);
+                await func(documentId, parameters, bucketName, vertexProject, vertexLocation);
             } else {
                 throw new Error(`The function ${functionName} is not available or is not a valid function.`);
             }
         } catch (error) {
             console.error(`Error executing ${functionName}: ${error}`);
 
+            let status = 'error';
+            let errorMessage = error.message;
+
+            if (error.message.includes('already being processed')) {
+                status = 'concurrencyError';
+                errorMessage = 'Function call hit concurrency issue';
+            }
+
             await admin.firestore().collection('functionCalls').doc(documentId).update({
-                'status': 'error',
-                'response.errorMessage': error.message,
+                'status': status,
+                'response.errorMessage': errorMessage,
                 'response.error': admin.firestore.FieldValue.serverTimestamp()
             });
         }
     });
 
-// Individual function handlers
+// Individual function handlers (unchanged)
 exports.inviteRequestHandler = functions.firestore
     .document('functionCalls/{documentId}')
     .onCreate(async (snap, context) => {
         const data = snap.data();
         if (data.functionName === 'inviteRequest') {
             const inviteRequest = require('./inviteRequest');
-            await inviteRequest(context.params.documentId, data.parameters, generativeModel, bucketName);
+            await inviteRequest(context.params.documentId, data.parameters, bucketName, vertexProject, vertexLocation);
         }
     });
 
@@ -83,7 +65,7 @@ exports.transactionsHandler = functions.firestore
         const data = snap.data();
         if (data.functionName === 'transactions') {
             const transactions = require('./transactions');
-            await transactions(context.params.documentId, data.parameters, generativeModel, bucketName);
+            await transactions(context.params.documentId, data.parameters, bucketName, vertexProject, vertexLocation);
         }
     });
 
@@ -93,7 +75,7 @@ exports.followHandler = functions.firestore
         const data = snap.data();
         if (data.functionName === 'follow') {
             const follow = require('./follow');
-            await follow(context.params.documentId, data.parameters, generativeModel, bucketName);
+            await follow(context.params.documentId, data.parameters, bucketName, vertexProject, vertexLocation);
         }
     });
 
@@ -103,7 +85,7 @@ exports.unfollowHandler = functions.firestore
         const data = snap.data();
         if (data.functionName === 'unfollow') {
             const unfollow = require('./unfollow');
-            await unfollow(context.params.documentId, data.parameters, generativeModel, bucketName);
+            await unfollow(context.params.documentId, data.parameters, bucketName, vertexProject, vertexLocation);
         }
     });
 
@@ -113,7 +95,7 @@ exports.userSetupHandler = functions.firestore
         const data = snap.data();
         if (data.functionName === 'userSetup') {
             const userSetup = require('./userSetup');
-            await userSetup(context.params.documentId, data.parameters, generativeModel, bucketName);
+            await userSetup(context.params.documentId, data.parameters, bucketName, vertexProject, vertexLocation);
         }
     });
 
@@ -123,7 +105,7 @@ exports.runAIHandler = functions.firestore
         const data = snap.data();
         if (data.functionName === 'runAI') {
             const runAI = require('./runAI');
-            await runAI(context.params.documentId, data.parameters, generativeModel, bucketName);
+            await runAI(context.params.documentId, data.parameters, bucketName, vertexProject, vertexLocation);
         }
     });
 
@@ -134,5 +116,66 @@ exports.createPostHandler = functions.firestore
         if (data.functionName === 'createPost') {
             const createPost = require('./createPost');
             await createPost(context.params.documentId, data.parameters);
+        }
+    });
+
+exports.updateEmailHandler = functions.firestore
+    .document('functionCalls/{documentId}')
+    .onCreate(async (snap, context) => {
+        const data = snap.data();
+        if (data.functionName === 'updateEmail') {
+            const updateEmail = require('./updateEmail');
+            await updateEmail(context.params.documentId, data.parameters);
+        }
+    });
+
+exports.updateUtcOffsetHandler = functions.firestore
+    .document('functionCalls/{documentId}')
+    .onCreate(async (snap, context) => {
+        const data = snap.data();
+        if (data.functionName === 'updateUtcOffset') {
+            const updateUtcOffset = require('./updateUtcOffset');
+            await updateUtcOffset(context.params.documentId, data.parameters);
+        }
+    });
+
+exports.updateEmailVerifiedHandler = functions.firestore
+    .document('functionCalls/{documentId}')
+    .onCreate(async (snap, context) => {
+        const data = snap.data();
+        if (data.functionName === 'updateEmailVerified') {
+            const updateEmailVerified = require('./updateEmailVerified');
+            await updateEmailVerified(context.params.documentId, data.parameters);
+        }
+    });
+
+exports.resizeImageHandler = functions.firestore
+    .document('functionCalls/{documentId}')
+    .onCreate(async (snap, context) => {
+        const data = snap.data();
+        if (data.functionName === 'resizeImage') {
+            const resizeImage = require('./resizeImage');
+            await resizeImage(context.params.documentId, data.parameters, bucketName);
+        }
+    });
+
+exports.pinataHandler = functions.firestore
+.document('functionCalls/{documentId}')
+.onCreate(async (snap, context) => {
+    const data = snap.data();
+    if (data.functionName === 'pinata') {
+        const pinata = require('./pinata');
+        await pinata(context.params.documentId, data.parameters, bucketName, vertexProject, vertexLocation);
+    }
+});
+
+
+exports.updatePostTitleDescHandler = functions.firestore
+    .document('functionCalls/{documentId}')
+    .onCreate(async (snap, context) => {
+        const data = snap.data();
+        if (data.functionName === 'updatePostTitleDesc') {
+            const updatePostTitleDesc = require('./updatePostTitleDesc');
+            await updatePostTitleDesc(context.params.documentId, data.parameters);
         }
     });

@@ -14,9 +14,13 @@
   "main": "index.js",
   "dependencies": {
     "@google-cloud/vertexai": "^1.2.0",
+    "axios": "^1.7.2",
     "canvas": "^2.11.2",
     "firebase-admin": "^12.1.0",
-    "firebase-functions": "^5.0.1"
+    "firebase-functions": "^5.0.1",
+    "form-data": "^4.0.0",
+    "fs": "^0.0.1-security",
+    "sharp": "^0.33.4"
   },
   "private": true
 }
