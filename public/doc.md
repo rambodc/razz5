@@ -10,7 +10,6 @@
 * __fbProjectId__ ```String```
 * __fbTokenId__ ```String```
 * __firstName__ ```String```
-* __followingUid__ ```String```
 * __FrameType__ ```String```
 * __functionPath__ ```String```
 * __global_doc__ ```Object```
