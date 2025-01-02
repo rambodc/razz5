@@ -4,25 +4,32 @@
     "ignore": [
       "firebase.json",
       "**/.*",
+      "!/.well-known/**",
       "**/node_modules/**"
     ],
     "rewrites": [
+      {
+        "source": "/post/**",
+        "function": "v1PostOGLink"
+      },
+      {
+        "source": "/main/**",
+        "destination": "/main"
+      },
       {
         "source": "**",
         "destination": "/index.html"
       }
     ]
   },
-  "functions": [
-    {
-      "source": "functions",
-      "codebase": "default",
-      "ignore": [
-        "node_modules",
-        ".git",
-        "firebase-debug.log",
-        "firebase-debug.*.log"
-      ]
-    }
-  ]
+  "functions": {
+    "source": "functions",
+    "codebase": "default",
+    "ignore": [
+      "node_modules",
+      ".git",
+      "firebase-debug.log",
+      "firebase-debug.*.log"
+    ]
+  }
 }
