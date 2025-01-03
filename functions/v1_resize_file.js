@@ -318,7 +318,7 @@ module.exports.v1_resize_file = functions.https.onRequest(async (req, res) => {
             console.log("Audio file converted and uploaded successfully");
 
             // Select a random audio thumbnail
-            const randomThumbnailIndex = Math.floor(Math.random() * 7) + 1; // Randomly select 1-7
+            const randomThumbnailIndex = Math.floor(Math.random() * 25) + 1; // Randomly select 1-25
             const thumbnailFileName = `audio_thumb/audio_thumb${randomThumbnailIndex}.png`;
 
             console.log(`Selected random thumbnail: ${thumbnailFileName}`);
