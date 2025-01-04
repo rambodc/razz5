@@ -25,7 +25,6 @@
 * __postRaz__ ```Number```
 * __redirectPath__ ```String```
 * __splitRaz__ ```Number```
-* __thankyou__ ```Number```
 * __themeColors__ ```Object```
 * __timezone__ ```String```
 * __totalRaz__ ```Number```
