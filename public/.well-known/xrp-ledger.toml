@@ -1,0 +1,19 @@
+[[ISSUERS]]
+address = "rUhwR4gM7KS2M6xLHMeL2hVCF86WhqocTj"
+name = "Razzberry"
+domain = "razzberry.ai"
+icon = "https://firebasestorage.googleapis.com/v0/b/razz5-14781.appspot.com/o/assets%2FRazzberry%20PNG-512.png?alt=media"
+
+[[TOKENS]]
+currency = "RAZ"
+issuer = "rUhwR4gM7KS2M6xLHMeL2hVCF86WhqocTj"
+name = "Razzberry"
+desc = "Value Your Art - Razzberry helps artists claim their creations and turn their work into lasting value."
+icon = "https://firebasestorage.googleapis.com/v0/b/razz5-14781.appspot.com/o/assets%2FRazzberry%20PNG-512.png?alt=media"
+asset_class = "Utility"
+trust_level = 1
+
+[[TOKENS.WEBLINKS]]
+url = "https://www.razzberry.ai/"
+type = "website"
+title = "Official Website"
