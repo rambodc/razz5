@@ -23,3 +23,4 @@ exports.v1_delete_post = require('./v1_delete_post').v1_delete_post;
 exports.v1_update_user = require('./v1_update_user').v1_update_user;
 exports.v1_create_revision_1 = require('./v1_create_revision_1').v1_create_revision_1;
 exports.v1_txn_sign_vm = require('./v1_txn_sign_vm').v1_txn_sign_vm;
+exports.v1_post_share = require('./v1_post_share').v1_post_share;

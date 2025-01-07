@@ -9,8 +9,8 @@
     ],
     "rewrites": [
       {
-        "source": "/post/**",
-        "function": "v1PostOGLink"
+        "source": "/share/**",
+        "function": "v1_post_share"
       },
       {
         "source": "/main/**",
