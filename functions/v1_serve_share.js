@@ -5,7 +5,6 @@ const { Storage } = require('@google-cloud/storage');
 const storage = new Storage({ projectId: functions.config().project_id });
 
 exports.v1_serve_share = functions.https.onRequest(async (req, res) => {
-    // Extract the share ID from the URL path
     const shareId = req.path.split('/').pop();
 
     if (!shareId) {
@@ -14,18 +13,18 @@ exports.v1_serve_share = functions.https.onRequest(async (req, res) => {
 
     const bucketName = functions.config().storage.bucket;
     const filePath = `share/${shareId}/index.html`;
-    const fileUrl = `https://storage.googleapis.com/${bucketName}/${filePath}`;
+    const firebaseUrl = `https://firebasestorage.googleapis.com/v0/b/${bucketName}/o/${encodeURIComponent(filePath)}?alt=media`;
 
     try {
-        // Check if the file exists in Cloud Storage (optional for validation)
+        // Check if the file exists in Cloud Storage (optional validation)
         const [exists] = await storage.bucket(bucketName).file(filePath).exists();
 
         if (!exists) {
             return res.status(404).send("Share not found");
         }
 
-        // Redirect to the Cloud Storage URL
-        return res.redirect(302, fileUrl);
+        // Redirect to the Firebase Storage URL
+        return res.redirect(302, firebaseUrl);
     } catch (error) {
         console.error("Error serving share file:", error.message);
         return res.status(500).send("Internal Server Error");

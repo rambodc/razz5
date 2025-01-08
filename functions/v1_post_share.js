@@ -141,10 +141,31 @@ module.exports.v1_post_share = functions.https.onRequest(async (req, res) => {
         const htmlContent = `
         <html>
         <head>
+            <!-- Open Graph Metadata -->
             <meta property="og:title" content="${title}" />
             <meta property="og:description" content="${description}" />
             <meta property="og:image" content="${image}" />
+            <meta property="og:url" content="${redirect_url}" />
+
+            <!-- Twitter Card Metadata -->
+            <meta name="twitter:card" content="summary_large_image" />
+            <meta name="twitter:title" content="${title}" />
+            <meta name="twitter:description" content="${description}" />
+            <meta name="twitter:image" content="${image}" />
+
+            <!-- X (formerly Twitter) Metadata -->
+            <meta name="x-card" content="summary_large_image" />
+            <meta name="x-title" content="${title}" />
+            <meta name="x-description" content="${description}" />
+            <meta name="x-image" content="${image}" />
+
+            <!-- Facebook Metadata -->
+            <meta property="og:site_name" content="Your Site Name" />
+            <meta property="og:type" content="website" />
+
+            <!-- Redirect to your SPA URL -->
             <meta http-equiv="refresh" content="0; url=${redirect_url}" />
+
             <title>${title}</title>
         </head>
         <body>
@@ -167,8 +188,7 @@ module.exports.v1_post_share = functions.https.onRequest(async (req, res) => {
             metadata: {
                 contentType: 'text/html',
                 cacheControl: 'public, max-age=3600' // Optional caching
-            },
-            predefinedAcl: 'publicRead' // Ensure public access
+            }
         });
 
         console.log(`HTML file uploaded to: ${destinationPath}`);
