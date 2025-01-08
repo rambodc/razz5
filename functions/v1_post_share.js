@@ -165,8 +165,10 @@ module.exports.v1_post_share = functions.https.onRequest(async (req, res) => {
         await bucket.upload(tempFilePath, {
             destination: destinationPath,
             metadata: {
-                contentType: 'text/html'
-            }
+                contentType: 'text/html',
+                cacheControl: 'public, max-age=3600' // Optional caching
+            },
+            predefinedAcl: 'publicRead' // Ensure public access
         });
 
         console.log(`HTML file uploaded to: ${destinationPath}`);
@@ -190,4 +192,3 @@ module.exports.v1_post_share = functions.https.onRequest(async (req, res) => {
         });
     }
 });
-

@@ -10,7 +10,7 @@
     "rewrites": [
       {
         "source": "/share/**",
-        "function": "v1_post_share"
+        "function": "v1_serve_share"
       },
       {
         "source": "/main/**",
