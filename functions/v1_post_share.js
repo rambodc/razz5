@@ -137,6 +137,9 @@ module.exports.v1_post_share = functions.https.onRequest(async (req, res) => {
 
         const shareId = shareRef.id;
 
+        // Append share_id to the redirect_url
+        const updatedRedirectUrl = `${redirect_url}/${shareId}`;
+
         // Step 1: Generate HTML for the share page
         const htmlContent = `
         <html>
@@ -145,7 +148,7 @@ module.exports.v1_post_share = functions.https.onRequest(async (req, res) => {
             <meta property="og:title" content="${title}" />
             <meta property="og:description" content="${description}" />
             <meta property="og:image" content="${image}" />
-            <meta property="og:url" content="${redirect_url}" />
+            <meta property="og:url" content="${updatedRedirectUrl}" />
 
             <!-- Twitter Card Metadata -->
             <meta name="twitter:card" content="summary_large_image" />
@@ -164,7 +167,7 @@ module.exports.v1_post_share = functions.https.onRequest(async (req, res) => {
             <meta property="og:type" content="website" />
 
             <!-- Redirect to your SPA URL -->
-            <meta http-equiv="refresh" content="0; url=${redirect_url}" />
+            <meta http-equiv="refresh" content="0; url=${updatedRedirectUrl}" />
 
             <title>${title}</title>
         </head>

@@ -7,6 +7,7 @@
 * __environment__ ```Number```
 * __fbAuthToken__ ```String```
 * __fbConfig__ ```Object```
+* __FBinitialized __ ```Number```
 * __fbProjectId__ ```String```
 * __fbTokenId__ ```String```
 * __firstName__ ```String```
