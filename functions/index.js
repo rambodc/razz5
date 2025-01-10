@@ -7,7 +7,6 @@ exports.extAddUidPost = require('./extAddUidPost').extAddUidPost;
 exports.extAddUidUser = require('./extAddUidUser').extAddUidUser;
 exports.v1_user_setup = require('./v1_user_setup').v1_user_setup;
 exports.v1_last_reset_time = require('./v1_last_reset_time').v1_last_reset_time;
-exports.v1_post_og_page = require('./v1_post_og_page').v1_post_og_page;
 exports.v1_update_email = require('./v1_update_email').v1_update_email;
 exports.v1_update_utc_offset = require('./v1_update_utc_offset').v1_update_utc_offset;
 exports.v1_update_email_verified = require('./v1_update_email_verified').v1_update_email_verified;

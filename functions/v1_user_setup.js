@@ -1,4 +1,3 @@
-// Firebase Cloud Function: v1_user_setup.js
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 const { createCanvas } = require('canvas');
@@ -28,9 +27,9 @@ module.exports.v1_user_setup = functions.https.onRequest(async (req, res) => {
     }
 
     // Extract necessary parameters from the request body
-    const { uid, first_name, last_name, email, user_type, user_status, last_reset_time, daily_raz, total_raz, utc_offset, email_verified, last_op, bio } = req.body;
+    const { uid, first_name, last_name, email, user_type, user_status, last_reset_time, daily_raz, total_reserve_raz, total_collected_raz, utc_offset, email_verified, bio } = req.body;
 
-    if (!uid || !email || !user_type || !user_status || last_reset_time === undefined || daily_raz === undefined || total_raz === undefined || !bio) {
+    if (!uid || !email || !user_type || !user_status || last_reset_time === undefined || daily_raz === undefined || total_reserve_raz === undefined || total_collected_raz === undefined || !bio) {
         return res.status(400).send("Missing required parameters");
     }
 
@@ -78,11 +77,10 @@ module.exports.v1_user_setup = functions.https.onRequest(async (req, res) => {
                     last_reset_time,  // Add the new last_reset_time field
                     daily_raz: Number(daily_raz), // Ensure daily_raz is a number
                     created_at: admin.firestore.FieldValue.serverTimestamp(),
-                    key: "string",
-                    total_raz: Number(total_raz), // Add total_raz from input
+                    total_reserve_raz: Number(total_reserve_raz), // Add total_reserve_raz from input
+                    total_collected_raz: Number(total_collected_raz), // Add total_collected_raz from input
                     utc_offset,
                     email_verified,
-                    last_op,
                     bio
                 }
             }, { merge: true });
