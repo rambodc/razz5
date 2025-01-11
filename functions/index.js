@@ -24,3 +24,6 @@ exports.v1_create_revision_1 = require('./v1_create_revision_1').v1_create_revis
 exports.v1_txn_sign_vm = require('./v1_txn_sign_vm').v1_txn_sign_vm;
 exports.v1_post_share = require('./v1_post_share').v1_post_share;
 exports.v1_serve_share = require('./v1_serve_share').v1_serve_share;
+exports.v1_interaction_support1 = require('./v1_interaction_support1').v1_interaction_support1;
+
+

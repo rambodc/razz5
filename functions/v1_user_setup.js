@@ -87,8 +87,8 @@ module.exports.v1_user_setup = functions.https.onRequest(async (req, res) => {
 
             // Create or update the user's document in the 'actions' collection
             transaction.set(actions_ref, {
-                uid,
                 general: {
+                    uid, // Move uid into the general object
                     total_actions_today: 0,
                     reset_global_action_at: admin.firestore.FieldValue.serverTimestamp(),
                     daily_limit: 2000

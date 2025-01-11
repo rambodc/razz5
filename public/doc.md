@@ -19,7 +19,6 @@
 * __ipv6__ ```Object```
 * __is_Portrait__ ```Number```
 * __isAuth__ ```Number```
-* __key__ ```String```
 * __lastName__ ```String```
 * __loader__ ```Number```
 * __network__ ```String```
@@ -28,7 +27,6 @@
 * __splitRaz__ ```Number```
 * __themeColors__ ```Object```
 * __timezone__ ```String```
-* __totalRaz__ ```Number```
 * __uid__ ```String```
 * __urlPath__ ```String```
 * __username__ ```String```
