@@ -214,13 +214,44 @@ module.exports.v1_create_revision_1 = functions.https.onRequest(async (req, res)
             throw new Error('Revision number already exists. Cannot create revision 1.');
         }
 
+        // Update the general object with the new revision number, IPFS hash, and status
         await postRef.set({
             general: {
                 ...postData.general,
                 revision_number: 1,
                 latest_revision_ipfs_hash: ipfs_hash,
+                status: "monetized" // Set status to monetized
             },
         }, { merge: true });
+
+        // Update the user's posts array to reflect the new status
+        const userRef = admin.firestore().collection('users').doc(uid);
+        await admin.firestore().runTransaction(async (transaction) => {
+            const userDoc = await transaction.get(userRef);
+            if (!userDoc.exists) {
+                throw new Error('User document does not exist.');
+            }
+
+            let userData = userDoc.data();
+            if (!userData.my_posts || !userData.my_posts.posts) {
+                throw new Error('User posts data does not exist.');
+            }
+
+            // Check if the post exists in the user's posts array
+            const postIndex = userData.my_posts.posts.findIndex(post => post.post_id === post_id);
+            if (postIndex === -1) {
+                throw new Error('Post not found in user data.');
+            }
+
+            // Update only the status of the existing post
+            userData.my_posts.posts[postIndex] = {
+                ...userData.my_posts.posts[postIndex],
+                status: "monetized" // Update status to monetized
+            };
+
+            // Update the user document with the modified posts array
+            transaction.set(userRef, userData, { merge: true });
+        });
 
         // Respond with success
         res.status(200).send({

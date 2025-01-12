@@ -142,10 +142,22 @@ module.exports.v1_interaction_support1 = functions.https.onRequest(async (req, r
             return;
         }
 
+        // Check post status and archive state
+        const postGeneral = postDoc.data().general;
+        if (postGeneral.status !== 'monetized') {
+            res.status(403).send({ status: "error", message: "Post is not monetized." });
+            return;
+        }
+
+        if (postGeneral.is_archived) {
+            res.status(403).send({ status: "error", message: "Post is archived." });
+            return;
+        }
+
         // Extract necessary values from the documents
         const totalCollectedRazSupport = supportDoc.data().general.total_collected_raz;
         const totalCollectedRazSupporters = supportersDoc.data().general.total_collected_raz;
-        const totalPostRaz = postDoc.data().general.total_post_raz;
+        const totalPostRaz = postGeneral.total_post_raz;
 
         // Update the balance fields in the support1 array
         supportData.balance = totalCollectedRazSupport;
@@ -154,18 +166,62 @@ module.exports.v1_interaction_support1 = functions.https.onRequest(async (req, r
 
         // Run a transaction to update Firestore documents
         await admin.firestore().runTransaction(async (transaction) => {
-            // Add the interaction to the interactions collection
-            transaction.set(interactionRef, { general, support1 });
+            // Add the interaction to the interactions collection with created_at field
+            transaction.set(interactionRef, { general: { ...general, created_at: admin.firestore.Timestamp.now() }, support1 });
 
             // Update total_collected_raz for the support user
             transaction.update(admin.firestore().collection('users').doc(supportData.uid), {
                 "general.total_collected_raz": totalCollectedRazSupport + supportData.amount
             });
 
+            // Add entry to my_support array in the support user document
+            const supportUserRef = admin.firestore().collection('users').doc(supportData.uid);
+            const supportUserDoc = await supportUserRef.get();
+            if (supportUserDoc.exists) {
+                const supportUserData = supportUserDoc.data();
+                const supportArray = supportUserData.my_support?.support || [];
+
+                const newSupportEntry = {
+                    post_id: supportData.post_id,
+                    first_name: supportDoc.data().general.first_name,
+                    last_name: supportDoc.data().general.last_name,
+                    amount: supportData.amount,
+                    currency: supportData.currency,
+                    created_at: admin.firestore.Timestamp.now()
+                };
+
+                const updatedSupportArray = [newSupportEntry, ...supportArray.slice(0, 99)];
+                transaction.update(supportUserRef, {
+                    "my_support.support": updatedSupportArray
+                });
+            }
+
             // Update total_collected_raz for the supporters user
             transaction.update(admin.firestore().collection('users').doc(supportersData.uid), {
                 "general.total_collected_raz": totalCollectedRazSupporters + supportersData.amount
             });
+
+            // Add entry to my_supporters array in the supporters user document
+            const supportersUserRef = admin.firestore().collection('users').doc(supportersData.uid);
+            const supportersUserDoc = await supportersUserRef.get();
+            if (supportersUserDoc.exists) {
+                const supportersUserData = supportersUserDoc.data();
+                const supportersArray = supportersUserData.my_supporters?.supporters || [];
+
+                const newSupportersEntry = {
+                    post_id: supportersData.post_id,
+                    first_name: supportersDoc.data().general.first_name,
+                    last_name: supportersDoc.data().general.last_name,
+                    amount: supportersData.amount,
+                    currency: supportersData.currency,
+                    created_at: admin.firestore.Timestamp.now()
+                };
+
+                const updatedSupportersArray = [newSupportersEntry, ...supportersArray.slice(0, 99)];
+                transaction.update(supportersUserRef, {
+                    "my_supporters.supporters": updatedSupportersArray
+                });
+            }
 
             // Update total_post_raz in the posts collection
             transaction.update(admin.firestore().collection('posts').doc(postValueData.post_id), {
