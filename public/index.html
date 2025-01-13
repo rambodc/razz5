@@ -8,13 +8,18 @@
     <title>Razzberry - Home</title>
 
     <!-- Favicon -->
-    <link rel="icon" href="assets/razzberry48.ico" type="image/x-icon">
+    <link rel="icon" href="assets/razzberry48.ico?v=1.0.1" type="image/x-icon">
 
     <!-- Meta Information -->
     <meta itemprop="name" content="Razzberry">
     <meta itemprop="description" content="Value Your Art- Razzberry helps artists claim their creations and turn their work into lasting value.">
     <meta itemprop="image" content="screenshot.png">
     <meta name="description" content="Value Your Art- Razzberry helps artists claim their creations and turn their work into lasting value."/>
+
+    <!-- Prevent Caching -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
 
     <!-- Styles -->
     <style>
@@ -55,7 +60,7 @@
     <canvas id="glcanvas" width="100vw" height="100vh" tabindex="1"></canvas>
 
     <!-- Scripts -->
-    <script type="text/javascript" src="js/patch.js" async></script>
+    <script type="text/javascript" src="js/patch.js?v=1.0.1" async></script>
     <script type="text/javascript">
         // Function to adjust viewport height dynamically based on the window height
         function setViewportHeight() {
@@ -125,6 +130,15 @@
         document.getElementById('glcanvas').addEventListener('touchmove', (e) => {
             e.preventDefault();
         }, false);
+
+        // Unregister service workers to prevent caching issues
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then((registrations) => {
+                registrations.forEach((registration) => {
+                    registration.unregister();
+                });
+            });
+        }
     </script>
 </body>
 </html>
