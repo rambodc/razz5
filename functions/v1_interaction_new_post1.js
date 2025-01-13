@@ -105,7 +105,7 @@ async function initializeAndCheck(req, res) {
     }
 }
 
-module.exports.v1_interaction_support1 = functions.https.onRequest(async (req, res) => {
+module.exports.v1_interaction_new_post1 = functions.https.onRequest(async (req, res) => {
     // Perform initial checks and validations
     const initResult = await initializeAndCheck(req, res);
     if (!initResult.proceed) {
@@ -113,13 +113,7 @@ module.exports.v1_interaction_support1 = functions.https.onRequest(async (req, r
     }
 
     const { uid } = initResult;
-    const { general, support1 } = req.body;
-
-    // **New Check: Prevent self-support**
-    if (general.uid === general.post_creator_uid) {
-        res.status(400).send({ status: "error", message: "You can't support your own post." });
-        return;
-    }
+    const { general, newpost1 } = req.body;
 
     try {
         // Check if the interaction already exists in the interactions collection
@@ -130,26 +124,19 @@ module.exports.v1_interaction_support1 = functions.https.onRequest(async (req, r
             return;
         }
 
-        // Extract specific objects from the support1 array
-        const supportData = support1.find(item => item.type === 'support');
-        const supportersData = support1.find(item => item.type === 'supporters');
-        const postValueData = support1.find(item => item.type === 'post_value');
+        // Extract the first element of the newpost1 array
+        const postValueData = newpost1[0];
+        const postRef = admin.firestore().collection('posts').doc(postValueData.post_id);
+        const postDoc = await postRef.get();
 
-        // Fetch required documents from Firestore
-        const [supportDoc, supportersDoc, postDoc] = await Promise.all([
-            admin.firestore().collection('users').doc(supportData.uid).get(),
-            admin.firestore().collection('users').doc(supportersData.uid).get(),
-            admin.firestore().collection('posts').doc(postValueData.post_id).get()
-        ]);
-
-        // Ensure all required documents exist
-        if (!supportDoc.exists || !supportersDoc.exists || !postDoc.exists) {
-            res.status(404).send({ status: "error", message: "Required document does not exist." });
+        if (!postDoc.exists) {
+            res.status(404).send({ status: "error", message: "Post does not exist." });
             return;
         }
 
-        // Check post status and archive state
         const postGeneral = postDoc.data().general;
+
+        // Check post status and archive state
         if (postGeneral.status !== 'monetized') {
             res.status(403).send({ status: "error", message: "Post is not monetized." });
             return;
@@ -160,88 +147,24 @@ module.exports.v1_interaction_support1 = functions.https.onRequest(async (req, r
             return;
         }
 
-        // Extract necessary values from the documents
-        const totalCollectedRazSupport = supportDoc.data().general.total_collected_raz;
-        const totalCollectedRazSupporters = supportersDoc.data().general.total_collected_raz;
-        const totalPostRaz = postGeneral.total_post_raz;
+        const totalPostRaz = postGeneral.total_post_raz || 0;
 
-        // Update the balance fields in the support1 array
-        supportData.balance = totalCollectedRazSupport;
-        supportersData.balance = totalCollectedRazSupporters;
-        postValueData.balance = totalPostRaz;
-
-        // Run a transaction to update Firestore documents
+        // Run a Firestore transaction to ensure data consistency
         await admin.firestore().runTransaction(async (transaction) => {
-            // Add the interaction to the interactions collection with created_at field
-            transaction.set(interactionRef, { general: { ...general, created_at: admin.firestore.Timestamp.now() }, support1 });
+            // Add the interaction document to Firestore
+            transaction.set(interactionRef, { general: { ...general, created_at: admin.firestore.Timestamp.now() }, newpost1 });
 
-            // Update total_collected_raz for the support user
-            transaction.update(admin.firestore().collection('users').doc(supportData.uid), {
-                "general.total_collected_raz": totalCollectedRazSupport + supportData.amount
-            });
-
-            // Add entry to my_support array in the support user document
-            const supportUserRef = admin.firestore().collection('users').doc(supportData.uid);
-            const supportUserDoc = await supportUserRef.get();
-            if (supportUserDoc.exists) {
-                const supportUserData = supportUserDoc.data();
-                const supportArray = supportUserData.my_support?.support || [];
-
-                const newSupportEntry = {
-                    post_id: supportData.post_id,
-                    first_name: supportersDoc.data().general.first_name,
-                    last_name: supportersDoc.data().general.last_name,
-                    uid: supportersData.uid,
-                    amount: supportData.amount,
-                    currency: supportData.currency,
-                    created_at: admin.firestore.Timestamp.now()
-                };
-
-                const updatedSupportArray = [newSupportEntry, ...supportArray.slice(0, 99)];
-                transaction.update(supportUserRef, {
-                    "my_support.support": updatedSupportArray
-                });
-            }
-
-            // Update total_collected_raz for the supporters user
-            transaction.update(admin.firestore().collection('users').doc(supportersData.uid), {
-                "general.total_collected_raz": totalCollectedRazSupporters + supportersData.amount
-            });
-
-            // Add entry to my_supporters array in the supporters user document
-            const supportersUserRef = admin.firestore().collection('users').doc(supportersData.uid);
-            const supportersUserDoc = await supportersUserRef.get();
-            if (supportersUserDoc.exists) {
-                const supportersUserData = supportersUserDoc.data();
-                const supportersArray = supportersUserData.my_supporters?.supporters || [];
-
-                const newSupportersEntry = {
-                    post_id: supportersData.post_id,
-                    first_name: supportDoc.data().general.first_name,
-                    last_name: supportDoc.data().general.last_name,
-                    uid: supportData.uid,
-                    amount: supportersData.amount,
-                    currency: supportersData.currency,
-                    created_at: admin.firestore.Timestamp.now()
-                };
-
-                const updatedSupportersArray = [newSupportersEntry, ...supportersArray.slice(0, 99)];
-                transaction.update(supportersUserRef, {
-                    "my_supporters.supporters": updatedSupportersArray
-                });
-            }
-
-            // Update total_post_raz in the posts collection
-            transaction.update(admin.firestore().collection('posts').doc(postValueData.post_id), {
+            // Update the total_post_raz value in the post document
+            transaction.update(postRef, {
                 "general.total_post_raz": totalPostRaz + postValueData.amount
             });
 
-            // Update the my_posts array in the post_value user's document
-            const postValueUserRef = admin.firestore().collection('users').doc(postValueData.uid);
-            const postValueUserDoc = await admin.firestore().collection('users').doc(postValueData.uid).get();
+            // Update the user's my_posts array in their document
+            const userRef = admin.firestore().collection('users').doc(uid);
+            const userDoc = await userRef.get();
 
-            if (postValueUserDoc.exists) {
-                const userData = postValueUserDoc.data();
+            if (userDoc.exists) {
+                const userData = userDoc.data();
 
                 if (userData.my_posts && Array.isArray(userData.my_posts.posts)) {
                     const updatedPosts = userData.my_posts.posts.map(post => {
@@ -252,8 +175,8 @@ module.exports.v1_interaction_support1 = functions.https.onRequest(async (req, r
                         return post;
                     });
 
-                    // Update the user's my_posts array in Firestore
-                    transaction.update(postValueUserRef, {
+                    // Commit the updated posts array back to Firestore
+                    transaction.update(userRef, {
                         "my_posts.posts": updatedPosts
                     });
                 }

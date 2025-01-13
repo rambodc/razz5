@@ -20,11 +20,11 @@
 * __is_Portrait__ ```Number```
 * __isAuth__ ```Number```
 * __lastName__ ```String```
+* __level_obj__ ```Object```
 * __loader__ ```Number```
 * __network__ ```String```
-* __postRaz__ ```Number```
+* __newSupport__ ```Object```
 * __redirectPath__ ```String```
-* __splitRaz__ ```Number```
 * __themeColors__ ```Object```
 * __timezone__ ```String```
 * __uid__ ```String```

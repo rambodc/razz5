@@ -27,9 +27,9 @@ module.exports.v1_user_setup = functions.https.onRequest(async (req, res) => {
     }
 
     // Extract necessary parameters from the request body
-    const { uid, first_name, last_name, email, user_type, user_status, last_reset_time, daily_raz, total_reserve_raz, total_collected_raz, utc_offset, email_verified, bio } = req.body;
+    const { uid, first_name, last_name, email, user_type, user_status, last_reset_time, daily_raz, total_reserve_raz, total_collected_raz, utc_offset, email_verified, bio, level } = req.body;
 
-    if (!uid || !email || !user_type || !user_status || last_reset_time === undefined || daily_raz === undefined || total_reserve_raz === undefined || total_collected_raz === undefined || !bio) {
+    if (!uid || !email || !user_type || !user_status || last_reset_time === undefined || daily_raz === undefined || total_reserve_raz === undefined || total_collected_raz === undefined || !bio || level === undefined) {
         return res.status(400).send("Missing required parameters");
     }
 
@@ -81,7 +81,8 @@ module.exports.v1_user_setup = functions.https.onRequest(async (req, res) => {
                     total_collected_raz: Number(total_collected_raz), // Add total_collected_raz from input
                     utc_offset,
                     email_verified,
-                    bio
+                    bio,
+                    level // Add level to the general object
                 }
             }, { merge: true });
 
