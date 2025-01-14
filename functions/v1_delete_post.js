@@ -125,7 +125,7 @@ module.exports.v1_delete_post = functions.https.onRequest(async (req, res) => {
         // Archive the post (set is_archived to true)
         await postRef.update({ "general.is_archived": true });
 
-        // Update user's posts array
+        // Update user's posts array and decrease post count
         const userRef = admin.firestore().collection('users').doc(uid);
         await admin.firestore().runTransaction(async (transaction) => {
             const userDoc = await transaction.get(userRef);
@@ -141,6 +141,11 @@ module.exports.v1_delete_post = functions.https.onRequest(async (req, res) => {
             const updatedPosts = userData.my_posts.posts.filter(post => post.post_id !== post_id);
             userData.my_posts.posts = updatedPosts;
             userData.my_posts.my_post_count = updatedPosts.length;
+
+            // Decrease the post_count in the general object
+            if (userData.general && typeof userData.general.post_count === 'number') {
+                userData.general.post_count = Math.max(0, userData.general.post_count - 1);
+            }
 
             transaction.set(userRef, userData, { merge: true });
         });

@@ -170,6 +170,24 @@ module.exports.v1_interaction_support1 = functions.https.onRequest(async (req, r
         supportersData.balance = totalCollectedRazSupporters;
         postValueData.balance = totalPostRaz;
 
+        // Update daily_raz field for type 'support'
+        const userRef = admin.firestore().collection('users').doc(uid);
+        const userDoc = await userRef.get();
+
+        if (userDoc.exists) {
+            const userData = userDoc.data();
+            let currentDailyRaz = userData.general?.daily_raz || 0;
+            const supportAmount = support1
+                .filter(item => item.type === 'support')
+                .reduce((acc, item) => acc + item.amount, 0);
+
+            currentDailyRaz += supportAmount;
+
+            await userRef.update({
+                "general.daily_raz": currentDailyRaz
+            });
+        }
+
         // Run a transaction to update Firestore documents
         await admin.firestore().runTransaction(async (transaction) => {
             // Add the interaction to the interactions collection with created_at field
