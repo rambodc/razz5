@@ -23,10 +23,12 @@
 * __level_obj__ ```Object```
 * __loader__ ```Number```
 * __network__ ```String```
+* __newShare__ ```Object```
 * __newSupport__ ```Object```
 * __redirectPath__ ```String```
 * __themeColors__ ```Object```
 * __timezone__ ```String```
+* __total_art_raz__ ```Number```
 * __uid__ ```String```
 * __urlPath__ ```String```
 * __username__ ```String```
