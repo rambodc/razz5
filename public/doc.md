@@ -3,7 +3,6 @@
 * __authEmail__ ```String```
 * __bio__ ```String```
 * __email__ ```String```
-* __emailVerified__ ```String```
 * __environment__ ```Number```
 * __fbAuthToken__ ```String```
 * __fbConfig__ ```Object```
