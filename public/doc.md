@@ -2,6 +2,7 @@
 
 * __authEmail__ ```String```
 * __bio__ ```String```
+* __editPageNo__ ```Number```
 * __email__ ```String```
 * __environment__ ```Number```
 * __fbAuthToken__ ```String```
