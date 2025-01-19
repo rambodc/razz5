@@ -140,7 +140,6 @@ module.exports.v1_delete_post = functions.https.onRequest(async (req, res) => {
 
             const updatedPosts = userData.my_posts.posts.filter(post => post.post_id !== post_id);
             userData.my_posts.posts = updatedPosts;
-            userData.my_posts.my_post_count = updatedPosts.length;
 
             // Decrease the post_count in the general object
             if (userData.general && typeof userData.general.post_count === 'number') {
