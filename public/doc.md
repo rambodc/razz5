@@ -2,11 +2,12 @@
 
 * __authEmail__ ```String```
 * __bio__ ```String```
+* __editPageNo__ ```Number```
 * __email__ ```String```
-* __emailVerified__ ```String```
 * __environment__ ```Number```
 * __fbAuthToken__ ```String```
 * __fbConfig__ ```Object```
+* __FBinitialized __ ```Number```
 * __fbProjectId__ ```String```
 * __fbTokenId__ ```String```
 * __firstName__ ```String```
@@ -18,16 +19,16 @@
 * __ipv6__ ```Object```
 * __is_Portrait__ ```Number```
 * __isAuth__ ```Number```
-* __key__ ```String```
 * __lastName__ ```String```
+* __level_obj__ ```Object```
 * __loader__ ```Number```
 * __network__ ```String```
-* __postRaz__ ```Number```
+* __newShare__ ```Object```
+* __newSupport__ ```Object```
 * __redirectPath__ ```String```
-* __splitRaz__ ```Number```
 * __themeColors__ ```Object```
 * __timezone__ ```String```
-* __totalRaz__ ```Number```
+* __total_art_raz__ ```Number```
 * __uid__ ```String```
 * __urlPath__ ```String```
 * __username__ ```String```

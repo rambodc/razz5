@@ -7,7 +7,6 @@ exports.extAddUidPost = require('./extAddUidPost').extAddUidPost;
 exports.extAddUidUser = require('./extAddUidUser').extAddUidUser;
 exports.v1_user_setup = require('./v1_user_setup').v1_user_setup;
 exports.v1_last_reset_time = require('./v1_last_reset_time').v1_last_reset_time;
-exports.v1_post_og_page = require('./v1_post_og_page').v1_post_og_page;
 exports.v1_update_email = require('./v1_update_email').v1_update_email;
 exports.v1_update_utc_offset = require('./v1_update_utc_offset').v1_update_utc_offset;
 exports.v1_update_email_verified = require('./v1_update_email_verified').v1_update_email_verified;
@@ -23,3 +22,9 @@ exports.v1_delete_post = require('./v1_delete_post').v1_delete_post;
 exports.v1_update_user = require('./v1_update_user').v1_update_user;
 exports.v1_create_revision_1 = require('./v1_create_revision_1').v1_create_revision_1;
 exports.v1_txn_sign_vm = require('./v1_txn_sign_vm').v1_txn_sign_vm;
+exports.v1_post_share = require('./v1_post_share').v1_post_share;
+exports.v1_serve_share = require('./v1_serve_share').v1_serve_share;
+exports.v1_interaction_support1 = require('./v1_interaction_support1').v1_interaction_support1;
+exports.v1_interaction_new_post1 = require('./v1_interaction_new_post1').v1_interaction_new_post1;
+
+exports.v1_feed_test1 = require('./v1_feed_test1').v1_feed_test1;

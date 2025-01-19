@@ -8,6 +8,7 @@ if (!admin.apps.length) {
 
 // General initialization and checks for all functions
 async function initializeAndCheck(req, res) {
+    // Set CORS headers for preflight requests
     const allowed_origin = functions.config().cors.origin || '*';
     res.set('Access-Control-Allow-Origin', allowed_origin);
     res.set('Access-Control-Allow-Methods', 'GET, POST');
@@ -30,6 +31,7 @@ async function initializeAndCheck(req, res) {
         return { proceed: false };
     }
 
+    // Extract and verify Firebase Auth Token
     const idToken = req.headers.authorization?.split('Bearer ')[1];
     if (!idToken) {
         res.status(401).send("Unauthorized: Missing Firebase Auth Token");
@@ -45,12 +47,22 @@ async function initializeAndCheck(req, res) {
         return { proceed: false };
     }
 
+    // Ensure the authenticated user's UID matches the request UID
     if (decodedToken.uid !== uid) {
         res.status(403).send("Unauthorized: UID mismatch");
         return { proceed: false };
     }
 
     try {
+        // Verify the user exists in the users Firestore collection
+        const user_ref = admin.firestore().collection('users').doc(uid);
+        const user_doc = await user_ref.get();
+        if (!user_doc.exists) {
+            res.status(404).send("User document does not exist in Firestore");
+            return { proceed: false };
+        }
+
+        // Verify custom claims for the user
         const user_record = await admin.auth().getUser(uid);
         const custom_claims = user_record.customClaims;
         if (!custom_claims || custom_claims.user_status !== 'active') {
@@ -58,6 +70,7 @@ async function initializeAndCheck(req, res) {
             return { proceed: false };
         }
 
+        // General action check before proceeding
         const actions_ref = admin.firestore().collection('actions').doc(uid);
         const actions_doc = await actions_ref.get();
         if (!actions_doc.exists) {
@@ -70,9 +83,12 @@ async function initializeAndCheck(req, res) {
         let total_actions_today = actions_data.general.total_actions_today;
         const daily_limit = actions_data.general.daily_limit;
 
+        // Convert Firestore timestamp to JavaScript Date
         const reset_global_action_at_date = new Date(reset_global_action_at.seconds * 1000);
 
+        // Check if 24 hours have passed since the last reset
         if (current_time - reset_global_action_at_date > 24 * 60 * 60 * 1000) {
+            // Reset total_actions_today and update reset_global_action_at
             total_actions_today = 0;
             await actions_ref.update({
                 "general.total_actions_today": total_actions_today,
@@ -80,13 +96,20 @@ async function initializeAndCheck(req, res) {
             });
         }
 
+        // Check if the user has exceeded the daily limit
         if (total_actions_today >= daily_limit) {
             res.status(429).send({ status: "error", message: "Daily action limit exceeded" });
             return { proceed: false };
         }
 
+        // Increment the total actions count
         total_actions_today += 1;
-        await actions_ref.update({ "general.total_actions_today": total_actions_today });
+
+        // Update the actions document with the new values
+        await actions_ref.update({
+            "general.total_actions_today": total_actions_today
+        });
+
         return { proceed: true, uid };
     } catch (error) {
         console.error(`Error during initialization and checks: ${error.message}`);
@@ -95,63 +118,45 @@ async function initializeAndCheck(req, res) {
     }
 }
 
-module.exports.v1_delete_post = functions.https.onRequest(async (req, res) => {
+module.exports.v1_feed_test1 = functions.https.onRequest(async (req, res) => {
+    // Perform initialization and checks
     const initResult = await initializeAndCheck(req, res);
-    if (!initResult.proceed) return;
+    if (!initResult.proceed) {
+        return;
+    }
 
     const { uid } = initResult;
     const { post_id } = req.body;
 
+    // Validate post_id
     if (!post_id) {
-        res.status(400).send("Missing required parameter: post_id");
+        res.status(400).send({ status: "error", message: "Missing required parameter: post_id" });
         return;
     }
 
     try {
-        const postRef = admin.firestore().collection('posts').doc(post_id);
-        const postDoc = await postRef.get();
+        // Reference to the global feed1 document
+        const feed_ref = admin.firestore().collection('global').doc('feed1');
 
-        if (!postDoc.exists) {
-            res.status(404).send({ status: "error", message: "Post not found" });
-            return;
-        }
-
-        const postData = postDoc.data();
-        if (postData.general?.uid !== uid) {
-            res.status(403).send({ status: "error", message: "Unauthorized: UID mismatch with post owner" });
-            return;
-        }
-
-        // Archive the post (set is_archived to true)
-        await postRef.update({ "general.is_archived": true });
-
-        // Update user's posts array and decrease post count
-        const userRef = admin.firestore().collection('users').doc(uid);
+        // Use a transaction to safely update the feed1 array
         await admin.firestore().runTransaction(async (transaction) => {
-            const userDoc = await transaction.get(userRef);
-            if (!userDoc.exists) {
-                throw new Error('User document does not exist.');
+            const feed_doc = await transaction.get(feed_ref);
+
+            let feed_data = { feed1: [] };
+            if (feed_doc.exists) {
+                feed_data = feed_doc.data();
             }
 
-            let userData = userDoc.data();
-            if (!userData.my_posts || !userData.my_posts.posts) {
-                throw new Error('User posts data does not exist.');
-            }
+            // Add the post_id to the top of the feed1 array
+            feed_data.feed1 = [post_id, ...feed_data.feed1];
 
-            const updatedPosts = userData.my_posts.posts.filter(post => post.post_id !== post_id);
-            userData.my_posts.posts = updatedPosts;
-
-            // Decrease the post_count in the general object
-            if (userData.general && typeof userData.general.post_count === 'number') {
-                userData.general.post_count = Math.max(0, userData.general.post_count - 1);
-            }
-
-            transaction.set(userRef, userData, { merge: true });
+            // Update the document in Firestore
+            transaction.set(feed_ref, feed_data, { merge: true });
         });
 
-        res.status(200).send({ status: "success", message: "Post deleted and archived successfully" });
+        res.status(200).send({ status: "success", message: "Post added to feed1 successfully" });
     } catch (error) {
-        console.error(`Error in v1_delete_post function: ${error.message}`);
+        console.error(`Error in v1_feed_test1 function: ${error.message}`);
         res.status(500).send({ status: "error", message: error.message });
     }
 });

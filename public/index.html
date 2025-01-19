@@ -1,7 +1,27 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1">
+
+    <!-- Page Title -->
     <title>Razzberry - Home</title>
+
+    <!-- Favicon -->
+    <link rel="icon" href="assets/razzberry48.ico?v=1.0.14" type="image/x-icon">
+
+    <!-- Meta Information -->
+    <meta itemprop="name" content="Razzberry">
+    <meta itemprop="description" content="Value Your Art- Razzberry helps artists claim their creations and turn their work into lasting value.">
+    <meta itemprop="image" content="screenshot.png">
+    <meta name="description" content="Value Your Art- Razzberry helps artists claim their creations and turn their work into lasting value."/>
+
+    <!-- Prevent Caching -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+
+    <!-- Styles -->
     <style>
         body {
             margin: 0;
@@ -34,22 +54,13 @@
             -ms-user-select: none;
             user-select: none;
         }
-
     </style>
-
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1">
-    <meta itemprop="name" content="Razzberry">
-    <meta itemprop="description" content="Powered by XRPL">
-    <meta itemprop="image" content="screenshot.png">
-    <meta name="description" content="Powered by XRPL"/>
-
 </head>
 <body>
     <canvas id="glcanvas" width="100vw" height="100vh" tabindex="1"></canvas>
 
-    <script type="text/javascript" src="js/patch.js" async></script>
-
+    <!-- Scripts -->
+    <script type="text/javascript" src="js/patch.js?v=1.0.14" async></script>
     <script type="text/javascript">
         // Function to adjust viewport height dynamically based on the window height
         function setViewportHeight() {
@@ -119,6 +130,15 @@
         document.getElementById('glcanvas').addEventListener('touchmove', (e) => {
             e.preventDefault();
         }, false);
+
+        // Unregister service workers to prevent caching issues
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then((registrations) => {
+                registrations.forEach((registration) => {
+                    registration.unregister();
+                });
+            });
+        }
     </script>
 </body>
 </html>

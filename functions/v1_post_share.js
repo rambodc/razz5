@@ -33,9 +33,9 @@ async function initializeAndCheck(req, res) {
     }
 
     // Extract necessary parameters from the request body
-    const { uid, post_id, title, description, image, og_url, redirect_url, refresh } = req.body;
+    const { uid, title, description, image, redirect_url } = req.body;
 
-    if (!uid || !post_id || !title || !description || !image || !og_url || !redirect_url || refresh === undefined) {
+    if (!uid || !title || !description || !image || !redirect_url) {
         res.status(400).send("Missing required parameters");
         return { proceed: false };
     }
@@ -104,7 +104,7 @@ async function initializeAndCheck(req, res) {
             "general.total_actions_today": total_actions_today
         });
 
-        return { proceed: true, uid, post_id, title, description, image, og_url, redirect_url, refresh };
+        return { proceed: true, uid, title, description, image, redirect_url };
     } catch (error) {
         console.error(`Error during initialization and checks: ${error.message}`);
         res.status(500).send({ status: "error", message: error.message });
@@ -112,124 +112,106 @@ async function initializeAndCheck(req, res) {
     }
 }
 
-module.exports.v1_post_og_page = functions.https.onRequest(async (req, res) => {
+module.exports.v1_post_share = functions.https.onRequest(async (req, res) => {
     const initResult = await initializeAndCheck(req, res);
     if (!initResult.proceed) {
         return;
     }
 
-    const { post_id, title, description, image, og_url, redirect_url, refresh } = initResult;
-    const post_doc_ref = admin.firestore().collection('posts').doc(post_id);
+    const { uid, title, description, image, redirect_url } = initResult;
+    const shareRef = admin.firestore().collection('share').doc(); // Generate a new document ID
 
     try {
-        console.log(`Starting v1_post_og_page function for post_id: ${post_id}`);
+        console.log(`Creating share document for user: ${uid}`);
 
-        // Get the server timestamp
-        const server_timestamp = admin.firestore.FieldValue.serverTimestamp();
+        // Add share metadata to Firestore
+        const shareData = {
+            title,
+            description,
+            image,
+            redirect_url,
+            created_at: admin.firestore.FieldValue.serverTimestamp()
+        };
 
-        // Step 1: Transaction to update the post document with the OG object
-        await admin.firestore().runTransaction(async (transaction) => {
-            const post_doc = await transaction.get(post_doc_ref);
+        await shareRef.set(shareData);
 
-            if (!post_doc.exists) {
-                throw new Error(`Post with post_id: ${post_id} does not exist.`);
-            }
+        const shareId = shareRef.id;
 
-            const og_data = {
-                title,
-                description,
-                image,
-                og_url,
-                redirect_url,
-                refresh,
-                updated_at: server_timestamp
-            };
+        // Append share_id to the redirect_url
+        const updatedRedirectUrl = `${redirect_url}/${shareId}`;
 
-            // Update the post document with the Open Graph data
-            transaction.update(post_doc_ref, { og: og_data });
-
-            console.log(`Open Graph data added to post document for post_id: ${post_id}`);
-        });
-
-        // Step 2: Create an index.html page with Open Graph and Twitter metadata and a redirect
-        const index_html_content = `
+        // Step 1: Generate HTML for the share page
+        const htmlContent = `
         <html>
-          <head>
+        <head>
             <!-- Open Graph Metadata -->
             <meta property="og:title" content="${title}" />
             <meta property="og:description" content="${description}" />
             <meta property="og:image" content="${image}" />
-            <meta property="og:url" content="${og_url}" />
+            <meta property="og:url" content="${updatedRedirectUrl}" />
 
             <!-- Twitter Card Metadata -->
             <meta name="twitter:card" content="summary_large_image" />
             <meta name="twitter:title" content="${title}" />
             <meta name="twitter:description" content="${description}" />
             <meta name="twitter:image" content="${image}" />
-            <meta name="twitter:url" content="${og_url}" />
 
-            <!-- Redirect to your SPA URL after ${refresh} seconds -->
-            <meta http-equiv="refresh" content="${refresh}; url=${redirect_url}" />
+            <!-- X (formerly Twitter) Metadata -->
+            <meta name="x-card" content="summary_large_image" />
+            <meta name="x-title" content="${title}" />
+            <meta name="x-description" content="${description}" />
+            <meta name="x-image" content="${image}" />
 
-            <!-- Page Style for Background Color and Centering Text -->
-            <style>
-              body {
-                background-color: #d0d3db;
-                color: black;
-                font-family: Arial, sans-serif;
-                height: 100vh;
-                margin: 0;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                text-align: center;
-                flex-direction: column;
-              }
+            <!-- Facebook Metadata -->
+            <meta property="og:site_name" content="Your Site Name" />
+            <meta property="og:type" content="website" />
 
-              h1 {
-                margin: 0;
-                font-size: 2.5em;
-              }
+            <!-- Redirect to your SPA URL -->
+            <meta http-equiv="refresh" content="0; url=${updatedRedirectUrl}" />
 
-              p {
-                margin: 0;
-                font-size: 1.5em;
-              }
-            </style>
-          </head>
-          <body>
-            <h1>Razzberry</h1>
-            <p>Loading...</p>
-          </body>
+            <title>${title}</title>
+        </head>
+        <body>
+            <h1>Redirecting...</h1>
+        </body>
         </html>
         `;
 
-        // Step 3: Write the HTML content to a local temporary file
-        const temp_file_path = path.join(os.tmpdir(), 'index.html');
-        fs.writeFileSync(temp_file_path, index_html_content, 'utf8');
+        // Step 2: Save the HTML to a temporary file
+        const tempFilePath = path.join(os.tmpdir(), 'index.html');
+        fs.writeFileSync(tempFilePath, htmlContent, 'utf8');
 
-        // Define the full bucket name and file path in Cloud Storage (posts/${post_id}/og/index.html)
-        const full_bucket_name = functions.config().storage.bucket;
-        const bucket = storage.bucket(full_bucket_name);
-        const destination_path = `posts/${post_id}/og/index.html`;
+        // Step 3: Upload the file to Cloud Storage
+        const bucketName = functions.config().storage.bucket;
+        const bucket = storage.bucket(bucketName);
+        const destinationPath = `share/${shareId}/index.html`;
 
-        // Step 4: Upload the index.html file to Cloud Storage
-        await bucket.upload(temp_file_path, {
-            destination: destination_path,
+        await bucket.upload(tempFilePath, {
+            destination: destinationPath,
             metadata: {
-                contentType: 'text/html'
+                contentType: 'text/html',
+                cacheControl: 'public, max-age=3600' // Optional caching
             }
         });
 
-        console.log(`index.html uploaded to: ${destination_path}`);
+        console.log(`HTML file uploaded to: ${destinationPath}`);
 
         // Cleanup: Remove the temporary file
-        fs.unlinkSync(temp_file_path);
+        fs.unlinkSync(tempFilePath);
 
-        // Respond with success message
-        return res.status(200).send({ status: "success", message: "Open Graph page created successfully", post_id, og_url, redirect_url });
+        // Respond with the share ID and success message
+        return res.status(200).send({
+            status: "success",
+            message: "Share link created successfully",
+            share_id: shareId,
+            share_url: `https://${functions.config().hosting.site}/share/${shareId}`
+        });
+
     } catch (error) {
-        console.error(`Error in v1_post_og_page function for post_id: ${post_id}: ${error.message}`);
-        return res.status(500).send({ status: "error", message: error.message });
+        console.error(`Error in v1_post_share: ${error.message}`);
+        return res.status(500).send({
+            status: "error",
+            message: error.message
+        });
     }
 });
