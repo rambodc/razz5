@@ -279,15 +279,19 @@ module.exports.v1_resize_file = functions.https.onRequest(async (req, res) => {
             console.log("Triggering v1_video_thumbnail function");
             const axios = require('axios');
             try {
-                const response = await axios.post('https://us-central1-razz5-14781.cloudfunctions.net/v1_video_thumbnail', {
+                const projectId = functions.config().vertex.project; // Fetch project ID from environment variables
+                const videoThumbnailUrl = `https://us-central1-${projectId}.cloudfunctions.net/v1_video_thumbnail`;
+                
+                const response = await axios.post(videoThumbnailUrl, {
                     uid,
                     post_id,
                     file_format: 'video',
                 }, {
                     headers: {
-                        Authorization: `Bearer ${req.headers.authorization.split('Bearer ')[1]}`
-                    }
+                        Authorization: `Bearer ${req.headers.authorization.split('Bearer ')[1]}`,
+                    },
                 });
+                
                 console.log(`v1_video_thumbnail response: ${response.data}`);
             } catch (error) {
                 console.error(`Error triggering v1_video_thumbnail: ${error.message}`);
