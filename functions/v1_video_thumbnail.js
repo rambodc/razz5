@@ -12,6 +12,7 @@ if (!admin.apps.length) {
 }
 
 // Initialize Google Cloud Storage with project ID from environment variables
+
 const { Storage } = require('@google-cloud/storage');
 const storage = new Storage({ projectId: functions.config().project_id });
 
