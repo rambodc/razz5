@@ -1,5 +1,5 @@
 // Firebase Cloud Function: v1_txn_sign_vm.js
-const functions = require('firebase-functions');
+const functions = require('firebase-functions/v1');
 const admin = require('firebase-admin');
 const axios = require('axios');
 

@@ -1,4 +1,4 @@
-const functions = require('firebase-functions');
+const functions = require('firebase-functions/v1');
 const admin = require('firebase-admin');
 
 // Only initialize Firebase Admin if it hasn't been initialized
@@ -7,6 +7,7 @@ if (!admin.apps.length) {
 }
 
 // General initialization and checks for all functions
+
 async function initializeAndCheck(req, res) {
     // Set CORS headers for preflight requests
     const allowed_origin = functions.config().cors.origin || '*';

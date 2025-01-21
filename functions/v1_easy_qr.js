@@ -1,10 +1,18 @@
 const functions = require('firebase-functions/v1');
 const admin = require('firebase-admin');
+const axios = require('axios');
+const QRCode = require('easyqrcodejs-nodejs');
+const { Storage } = require('@google-cloud/storage');
+const path = require('path');
+const os = require('os');
+const fs = require('fs');
 
 // Only initialize Firebase Admin if it hasn't been initialized
 if (!admin.apps.length) {
     admin.initializeApp();
 }
+
+const storage = new Storage();
 
 // General initialization and checks for all functions
 async function initializeAndCheck(req, res) {
@@ -15,7 +23,6 @@ async function initializeAndCheck(req, res) {
     res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
     if (req.method === "OPTIONS") {
-        // Handle preflight request
         res.status(204).send('');
         return { proceed: false };
     }
@@ -25,15 +32,10 @@ async function initializeAndCheck(req, res) {
         return { proceed: false };
     }
 
-    const { uid, utc_offset } = req.body;
-    if (!uid || utc_offset === undefined) {
-        res.status(400).send("Missing required parameters");
-        return { proceed: false };
-    }
+    const { uid } = req.body;
 
-    // Validate UTC offset format
-    if (typeof utc_offset !== 'string' || !/^[-+]\d{4}$/.test(utc_offset)) {
-        res.status(400).send("Invalid utc_offset format. It should be a string like '-0700'");
+    if (!uid) {
+        res.status(400).send("Missing required parameter: uid");
         return { proceed: false };
     }
 
@@ -59,10 +61,17 @@ async function initializeAndCheck(req, res) {
         return { proceed: false };
     }
 
-    const user_ref = admin.firestore().collection('users').doc(uid);
-    const actions_ref = admin.firestore().collection('actions').doc(uid);
-
     try {
+        // Verify custom claims for the user
+        const user_record = await admin.auth().getUser(uid);
+        const custom_claims = user_record.customClaims;
+        if (!custom_claims || custom_claims.user_status !== 'active') {
+            res.status(403).send({ status: "error", message: "Unauthorized: User does not have the required permissions" });
+            return { proceed: false };
+        }
+
+        // General action check before proceeding
+        const actions_ref = admin.firestore().collection('actions').doc(uid);
         const actions_doc = await actions_ref.get();
         if (!actions_doc.exists) {
             throw new Error('Actions document does not exist.');
@@ -74,9 +83,12 @@ async function initializeAndCheck(req, res) {
         let total_actions_today = actions_data.general.total_actions_today;
         const daily_limit = actions_data.general.daily_limit;
 
+        // Convert Firestore timestamp to JavaScript Date
         const reset_global_action_at_date = new Date(reset_global_action_at.seconds * 1000);
 
+        // Check if 24 hours have passed since the last reset
         if (current_time - reset_global_action_at_date > 24 * 60 * 60 * 1000) {
+            // Reset total_actions_today and update reset_global_action_at
             total_actions_today = 0;
             await actions_ref.update({
                 "general.total_actions_today": total_actions_today,
@@ -84,17 +96,21 @@ async function initializeAndCheck(req, res) {
             });
         }
 
+        // Check if the user has exceeded the daily limit
         if (total_actions_today >= daily_limit) {
             res.status(429).send({ status: "error", message: "Daily action limit exceeded" });
             return { proceed: false };
         }
 
+        // Increment the total actions count
         total_actions_today += 1;
+
+        // Update the actions document with the new values
         await actions_ref.update({
             "general.total_actions_today": total_actions_today
         });
 
-        return { proceed: true, user_ref, utc_offset };
+        return { proceed: true, uid };
     } catch (error) {
         console.error(`Error during initialization and checks: ${error.message}`);
         res.status(500).send({ status: "error", message: error.message });
@@ -102,36 +118,65 @@ async function initializeAndCheck(req, res) {
     }
 }
 
-module.exports.v1_update_utc_offset = functions.https.onRequest(async (req, res) => {
+module.exports.v1_easy_qr = functions.https.onRequest(async (req, res) => {
     const initResult = await initializeAndCheck(req, res);
     if (!initResult.proceed) {
         return;
     }
 
-    const { user_ref, utc_offset } = initResult;
+    const { uid } = initResult;
+    const { text, logoUrl, post_id } = req.body;
+
+    if (!text || !logoUrl || !post_id) {
+        res.status(400).send({ message: "Missing required parameters: text, logoUrl, or post_id" });
+        return;
+    }
 
     try {
-        await admin.firestore().runTransaction(async (transaction) => {
-            const user_doc = await transaction.get(user_ref);
-            if (!user_doc.exists) {
-                throw new Error('User document does not exist.');
-            }
+        // Fetch the logo as a Buffer
+        const response = await axios.get(logoUrl, { responseType: 'arraybuffer' });
+        const logoBuffer = Buffer.from(response.data, 'binary');
 
-            const userData = user_doc.data();
-            console.log(`Document data: ${JSON.stringify(userData)}`);
+        const options = {
+            text: text,
+            logo: logoBuffer,
+            width: 300,
+            height: 300,
+            logoWidth: 50,
+            logoHeight: 50,
+        };
 
-            if (userData.general?.uid !== user_ref.id) {
-                throw new Error('UID mismatch in user document general.uid field.');
-            }
+        const qrcode = new QRCode(options);
+        const tempFilePath = path.join(os.tmpdir(), `${post_id}_qr.png`);
 
-            transaction.update(user_ref, {
-                "general.utc_offset": utc_offset
-            });
+        // Save the QR code as a PNG file locally
+        await qrcode.saveImage({ path: tempFilePath });
+
+        // Define the storage path
+        const storagePath = `posts/${post_id}/qr/qr_1.png`;
+        const bucket = admin.storage().bucket();
+
+        // Upload the file to Cloud Storage
+        await bucket.upload(tempFilePath, {
+            destination: storagePath,
+            metadata: {
+                contentType: 'image/png',
+            },
         });
 
-        res.status(200).send({ status: "success", message: "User UTC offset updated successfully", utc_offset });
+        // Clean up the temporary file
+        fs.unlinkSync(tempFilePath);
+
+        res.status(200).send({
+            status: "success",
+            message: "QR code generated and stored successfully",
+            storagePath,
+        });
     } catch (error) {
-        console.error(`Error in v1_update_utc_offset function: ${error.message}`);
-        res.status(500).send({ status: "error", message: error.message });
+        console.error(`Error generating QR code: ${error.message}`);
+        res.status(500).send({
+            status: "error",
+            message: `Error generating QR code: ${error.message}`,
+        });
     }
 });

@@ -28,3 +28,4 @@ exports.v1_interaction_support1 = require('./v1_interaction_support1').v1_intera
 exports.v1_interaction_new_post1 = require('./v1_interaction_new_post1').v1_interaction_new_post1;
 
 exports.v1_feed_test1 = require('./v1_feed_test1').v1_feed_test1;
+exports.v1_easy_qr = require('./v1_easy_qr').v1_easy_qr;

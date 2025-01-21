@@ -1,6 +1,6 @@
 
 // Firebase Cloud Function: extAddUidUser.js
-const functions = require("firebase-functions");
+const functions = require("firebase-functions/v1");
 
 exports.extAddUidUser = functions.https.onRequest((req, res) => {
     try {

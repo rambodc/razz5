@@ -1,5 +1,5 @@
 // Firebase Cloud Function: v1_create_revision_1.js
-const functions = require('firebase-functions');
+const functions = require('firebase-functions/v1');
 const admin = require('firebase-admin');
 const axios = require('axios');
 const FormData = require('form-data');

@@ -1,6 +1,6 @@
 
 // Firebase Cloud Function: v1_resize_file.js (Updated Version with Requested Changes)
-const functions = require('firebase-functions');
+const functions = require('firebase-functions/v1');
 const admin = require('firebase-admin');
 const fs = require('fs');
 const os = require('os');

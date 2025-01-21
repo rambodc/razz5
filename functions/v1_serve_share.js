@@ -1,5 +1,5 @@
 // Updated function to serve HTML content directly and enhance logging and error handling
-const functions = require('firebase-functions');
+const functions = require('firebase-functions/v1');
 const { Storage } = require('@google-cloud/storage');
 
 // Initialize Google Cloud Storage with project ID from environment variables

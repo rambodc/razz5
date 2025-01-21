@@ -1,5 +1,5 @@
 // Firebase Cloud Function: extAddUidPost.js
-const functions = require("firebase-functions");
+const functions = require("firebase-functions/v1");
 
 exports.extAddUidPost = functions.https.onRequest((req, res) => {
     try {
