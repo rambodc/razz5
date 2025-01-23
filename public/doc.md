@@ -22,7 +22,6 @@
 * __lastName__ ```String```
 * __level_obj__ ```Object```
 * __loader__ ```Number```
-* __network__ ```String```
 * __newShare__ ```Object```
 * __newSupport__ ```Object```
 * __redirectPath__ ```String```
@@ -35,6 +34,7 @@
 * __usersListner__ ```Object```
 * __userStatus__ ```String```
 * __utcOffset__ ```String```
+* __version__ ```String```
 * __width__ ```Number```
 * __wssSelect__ ```String```
 

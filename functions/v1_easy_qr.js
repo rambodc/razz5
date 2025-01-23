@@ -125,7 +125,7 @@ module.exports.v1_easy_qr = functions.https.onRequest(async (req, res) => {
     }
 
     const { uid } = initResult;
-    const { text, logoUrl, post_id } = req.body;
+    const { text, logoUrl, post_id, options } = req.body;
 
     if (!text || !logoUrl || !post_id) {
         res.status(400).send({ message: "Missing required parameters: text, logoUrl, or post_id" });
@@ -137,7 +137,8 @@ module.exports.v1_easy_qr = functions.https.onRequest(async (req, res) => {
         const response = await axios.get(logoUrl, { responseType: 'arraybuffer' });
         const logoBuffer = Buffer.from(response.data, 'binary');
 
-        const options = {
+        // Merge default options with passed options
+        const defaultOptions = {
             text: text,
             logo: logoBuffer,
             width: 300,
@@ -146,7 +147,9 @@ module.exports.v1_easy_qr = functions.https.onRequest(async (req, res) => {
             logoHeight: 50,
         };
 
-        const qrcode = new QRCode(options);
+        const qrOptions = { ...defaultOptions, ...options };
+
+        const qrcode = new QRCode(qrOptions);
         const tempFilePath = path.join(os.tmpdir(), `${post_id}_qr.png`);
 
         // Save the QR code as a PNG file locally
