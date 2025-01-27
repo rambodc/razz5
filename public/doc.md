@@ -2,6 +2,7 @@
 
 * __authEmail__ ```String```
 * __bio__ ```String```
+* __C-Back Enabled__ ```Number```
 * __editPageNo__ ```Number```
 * __email__ ```String```
 * __environment__ ```Number```
@@ -24,6 +25,7 @@
 * __loader__ ```Number```
 * __newShare__ ```Object```
 * __newSupport__ ```Object```
+* __NoUserFound__ ```Number```
 * __redirectPath__ ```String```
 * __themeColors__ ```Object```
 * __timezone__ ```String```
