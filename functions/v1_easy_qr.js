@@ -150,13 +150,13 @@ module.exports.v1_easy_qr = functions.https.onRequest(async (req, res) => {
         const qrOptions = { ...defaultOptions, ...options };
 
         const qrcode = new QRCode(qrOptions);
-        const tempFilePath = path.join(os.tmpdir(), `${post_id}_qr.png`);
+        const tempFilePath = path.join(os.tmpdir(), `${post_id}_qr_default.png`);
 
         // Save the QR code as a PNG file locally
         await qrcode.saveImage({ path: tempFilePath });
 
         // Define the storage path
-        const storagePath = `posts/${post_id}/qr/qr_1.png`;
+        const storagePath = `posts/${post_id}/qr/${post_id}_qr_default.png`;
         const bucket = admin.storage().bucket();
 
         // Upload the file to Cloud Storage
