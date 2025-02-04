@@ -132,7 +132,7 @@ module.exports.v1_update_email = functions.https.onRequest(async (req, res) => {
             });
         });
 
-        res.status(200).send({ status: "success", message: "User email updated successfully", email });
+        res.status(200).send({ status: "success", message: "User email updated successfully", email, documentId: uid });
     } catch (error) {
         console.error(`Error in v1_update_email function for uid: ${uid}: ${error.message}`);
         res.status(500).send({ status: "error", message: error.message });
