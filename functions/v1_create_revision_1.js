@@ -159,8 +159,8 @@ module.exports.v1_create_revision_1 = functions.https.onRequest(async (req, res)
     // Initialize Cloud Storage paths for the revision file
     const bucket_name = functions.config().storage.bucket;
     const bucket = storage.bucket(bucket_name);
-    const revisionPath = `posts/${post_id}/revisions/revision1.json`;
-    const tempRevisionPath = path.join(os.tmpdir(), 'revision1.json');
+    const revisionPath = `posts/${post_id}/revisions/revision_1.json`;
+    const tempRevisionPath = path.join(os.tmpdir(), 'revision_1.json');
 
     try {
         // Check if the revision file already exists in Cloud Storage
@@ -186,7 +186,7 @@ module.exports.v1_create_revision_1 = functions.https.onRequest(async (req, res)
         form_data.append('file', fs.createReadStream(tempRevisionPath));
 
         const pinata_metadata = JSON.stringify({
-            name: `revision1_${post_id}`,
+            name: `revision_1_${post_id}`,
             keyvalues: {
                 post_id: post_id,
             },
