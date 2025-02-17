@@ -2,7 +2,7 @@
 
 * __authEmail__ ```String```
 * __bio__ ```String```
-* __C-Back Disabled__ ```Number```
+* __C-Back Disabled__ ```Number``` (default Value: `0`)
 * __editPageNo__ ```Number```
 * __email__ ```String```
 * __environment__ ```Number```
